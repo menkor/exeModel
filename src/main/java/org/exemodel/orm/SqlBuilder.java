@@ -93,7 +93,10 @@ public abstract class SqlBuilder<T> {
     }
 
 
-    private T inSqlGenerate(String column, Object[] values,String op){//
+    private T inSqlGenerate(String column, Object[] values,String op){
+        if( values==null || values.length == 0){
+            return (T) this;
+        }
         where.append(" AND ");
         where.append(column);
         where.append(op);
@@ -112,12 +115,36 @@ public abstract class SqlBuilder<T> {
         return (T)this;
     }
 
+    private T inSqlGenerate(String column,List list,String op){
+        if( list== null || list.size() == 0){
+            return (T) this;
+        }
+        Object[] values = new Object[list.size()];
+        int i=0;
+        for (Object o:list){
+            values[i++] = o;
+        }
+        return inSqlGenerate(column,values,op);
+    }
+
+    public T in(String column,List values){
+        return in(column,values);
+    }
+
+
+
+    public T notIn(String column,List values){
+        return notIn(column,values);
+    }
+
+
 
     public T regExp(String column,String regExp){
         return and(column," REGEXP ",regExp);
     }
 
     public T in(String column, Object[] values){
+
         return inSqlGenerate(StringUtil.underscoreName(column),values," IN ");
     }
 

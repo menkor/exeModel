@@ -1,6 +1,5 @@
 package org.exemodel.orm;
 
-import org.apache.log4j.Logger;
 import org.exemodel.cache.ICache;
 import org.exemodel.cache.Promise;
 import org.exemodel.exceptions.JdbcRuntimeException;
@@ -18,7 +17,6 @@ import java.util.Map;
 @SuppressWarnings("unchecked")
 public abstract class Statement<T> extends SqlBuilder<T> {
 
-  protected static Logger logger = Logger.getLogger(Statement.class);
   protected Class<?> modelClass;
   protected volatile ModelMeta modelMeta;
   protected Object key;
@@ -282,7 +280,7 @@ public abstract class Statement<T> extends SqlBuilder<T> {
 
   public int set(String setSql, ParameterBindings setParams) {
     if (isCacheable()) {
-      logger.warn("WARN: You update a cacheable model and the cache field not update");
+      throw new JdbcRuntimeException("WARN: You update a cacheable model and the cache field not update");
     }
     String sql = " UPDATE " + getModelMeta().getTableName() + " SET " + setSql + where;
     ParameterBindings all;
@@ -427,7 +425,7 @@ public abstract class Statement<T> extends SqlBuilder<T> {
     } else {
       for (int i = 0, l = keyValues.length; i < l; i++) {
         if (i % 2 == 0) {//key
-          int order = cacheIndex.indexOf(StringUtil.underscoreName((String) keyValues[i]));
+          int order = cacheIndex .indexOf(StringUtil.underscoreName((String) keyValues[i]));
           if (order > -1) {//update cached field
             throw new JdbcRuntimeException("Update cached fields but not with id");
           }

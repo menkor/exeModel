@@ -1,4 +1,4 @@
-package org.exemodel.transation;
+package org.exemodel.transation.spring;
 
 
 import org.exemodel.session.AbstractSession;
@@ -34,13 +34,11 @@ public class TransactionManager extends AbstractPlatformTransactionManager {
 
     @Override
     protected void doCommit(DefaultTransactionStatus defaultTransactionStatus) throws TransactionException {
-//        LOG.info("db session commit");
         sessionFactory.currentSession().commit();
     }
 
     @Override
     protected void doRollback(DefaultTransactionStatus defaultTransactionStatus) throws TransactionException {
-//        LOG.info("db session rollback");
         sessionFactory.currentSession().rollback();
     }
 

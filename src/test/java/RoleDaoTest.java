@@ -41,8 +41,7 @@ public class RoleDaoTest {
 
         session.getCache().delete(role.generateKey());
         Role role3 = CustomStatement.build(Role.class).findCache(role.getId(),role.getUserId());
-        Assert.assertTrue(role3.getTitle().equals("Software Test"));
-        Assert.assertTrue(role3.getDetails()==null);//because details not cache
+        Assert.assertTrue(role3 == null);
 
         Role role4 = CustomStatement.build(Role.class).findCache(role.getId());
         Assert.assertTrue(role4.getDetails()==null);//because details not cache

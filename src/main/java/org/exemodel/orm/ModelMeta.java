@@ -7,7 +7,6 @@ import org.exemodel.exceptions.JdbcRuntimeException;
 import org.exemodel.util.BinaryUtil;
 import org.exemodel.util.StringUtil;
 
-import javax.inject.Inject;
 import javax.persistence.Transient;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;

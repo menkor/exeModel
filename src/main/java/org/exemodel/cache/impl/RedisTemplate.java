@@ -1,15 +1,19 @@
 package org.exemodel.cache.impl;
 
+import org.apache.commons.collections.map.HashedMap;
 import org.exemodel.cache.ICache;
 import org.exemodel.cache.Promise;
-import org.exemodel.session.AbstractSession;
 import org.exemodel.exceptions.JedisRuntimeException;
 import org.exemodel.orm.ExecutableModel;
 import org.exemodel.orm.FieldAccessor;
 import org.exemodel.orm.ModelMeta;
-import org.exemodel.util.*;
-import org.apache.commons.collections.map.HashedMap;
-import org.apache.log4j.Logger;
+import org.exemodel.session.AbstractSession;
+import org.exemodel.util.BinaryUtil;
+import org.exemodel.util.MapTo;
+import org.exemodel.util.ParameterBindings;
+import org.exemodel.util.StringUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import redis.clients.jedis.*;
 
 import java.util.*;
@@ -26,11 +30,13 @@ public class RedisTemplate implements ICache {
 
     public final static String OK = "OK";
     protected static ReentrantLock lockJedis = new ReentrantLock();
-    protected static Logger logger = Logger.getLogger(RedisTemplate.class);
+    protected static Logger logger = LoggerFactory.getLogger(RedisTemplate.class);
     private static JedisPool jedisPool = null;
     private String host = "localhost";
     private int port = 6378;
     private int timeout = 2000;
+    private int database = 0;
+    private boolean ssl = false;
     private String password = null;
     private final static byte[] updateLua = BinaryUtil.getBytes("if redis.call('EXISTS',KEYS[1])==1 then return redis.call('hmset',KEYS[1],unpack(ARGV)) else return 'OK' end");
     private static byte[] updateLuaSha;
@@ -41,30 +47,37 @@ public class RedisTemplate implements ICache {
      * 初始化Redis连接池
      */
 
-    public RedisTemplate(JedisPoolConfig jedisPoolConfig, String host, int port, int timeout, String password) {
+    public RedisTemplate(JedisPoolConfig jedisPoolConfig, String host, int port, int timeout, String password, int database, boolean ssl) {
         this.host = host;
         this.port = port;
         this.timeout = timeout;
+        this.ssl = ssl;
+        this.database = database;
         if (StringUtil.isEmpty(password)) {
             password = null;
         }
         this.password = password;
-        jedisPool = new JedisPool(jedisPoolConfig, host, port, timeout, password);
+        jedisPool = new JedisPool(jedisPoolConfig, host, port, timeout, password,database,ssl);
         Jedis jedis = getJedis();
         updateLuaSha = jedis.scriptLoad(updateLua);
         jedis.close();
     }
 
 
-    public RedisTemplate(String host, int port, int timeout){
+    public RedisTemplate(String host, int port, int timeout, int database, boolean ssl){
         this.host = host;
         this.port = port;
         this.timeout = timeout;
+        this.ssl = ssl;
+        this.database = database;
     }
+
+
+
 
     @Override
     public ICache clone() {
-        return new RedisTemplate(this.host,this.port,this.timeout);
+        return new RedisTemplate(this.host,this.port,this.timeout,this.database,this.ssl);
     }
 
     public  Jedis getJedis() {
@@ -282,7 +295,7 @@ public class RedisTemplate implements ICache {
     }
 
     @Override
-    public <T> T get(Object id, Class<?> clazz, Promise promise, byte[][] bytes,String[] fields) {
+    public <T> T get(Object id, Class<?> clazz, Promise promise, byte[][] bytes, String[] fields) {
         ModelMeta modelMeta = ModelMeta.getModelMeta(clazz);
         FieldAccessor idAccessor = modelMeta.getIdAccessor();
         byte[] key = BinaryUtil.generateKey(modelMeta.getKey(), BinaryUtil.getBytes(id));
@@ -447,11 +460,47 @@ public class RedisTemplate implements ICache {
         return host;
     }
 
+    public void setHost(String host) {
+        this.host = host;
+    }
+
     public int getPort() {
         return port;
     }
 
+    public void setPort(int port) {
+        this.port = port;
+    }
+
     public int getTimeout() {
         return timeout;
+    }
+
+    public void setTimeout(int timeout) {
+        this.timeout = timeout;
+    }
+
+    public int getDatabase() {
+        return database;
+    }
+
+    public void setDatabase(int database) {
+        this.database = database;
+    }
+
+    public boolean isSsl() {
+        return ssl;
+    }
+
+    public void setSsl(boolean ssl) {
+        this.ssl = ssl;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 }

@@ -5,8 +5,9 @@ import org.exemodel.orm.ExecutableModel;
 import org.exemodel.orm.FieldAccessor;
 import org.exemodel.orm.ModelMeta;
 import org.exemodel.util.BinaryUtil;
-import com.google.common.collect.ImmutableMap;
 import org.exemodel.util.MapTo;
+import org.exemodel.util.PrimitivesWrapper;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -115,18 +116,7 @@ public abstract class AbstractSession implements Session {
         return cache;
     }
 
-    private static final Map<Class<?>, Class<?>> PRIMITIVES_TO_WRAPPERS
-            = new ImmutableMap.Builder<Class<?>, Class<?>>()
-            .put(boolean.class, Boolean.class)
-            .put(byte.class, Byte.class)
-            .put(char.class, Character.class)
-            .put(double.class, Double.class)
-            .put(float.class, Float.class)
-            .put(int.class, Integer.class)
-            .put(long.class, Long.class)
-            .put(short.class, Short.class)
-            .put(void.class, Void.class)
-            .build();
+    private static final Map<Class<?>, Class<?>> PRIMITIVES_TO_WRAPPERS = PrimitivesWrapper.get();
 
     private boolean canSetProperties(ModelMeta.ModelColumnMeta fromColumnMeta,ModelMeta.ModelColumnMeta toColumnMeta){
         if(!toColumnMeta.fieldName.equals(fromColumnMeta.fieldName)){
