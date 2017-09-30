@@ -80,14 +80,14 @@ public abstract class SqlBuilder<T> {
 
     public T isNull(String column){
         where.append(" AND ");
-        where.append(column);
+        where.append(StringUtil.underscoreName(column));
         where.append(" IS NULL ");
         return (T)this;
     }
 
     public T isNotNull(String column){
         where.append(" AND ");
-        where.append(column);
+        where.append(StringUtil.underscoreName(column));
         where.append(" IS NOT NULL ");
         return (T)this;
     }
@@ -95,6 +95,7 @@ public abstract class SqlBuilder<T> {
 
     private T inSqlGenerate(String column, Object[] values,String op){
         if( values==null || values.length == 0){
+            where.append(" AND 0 = 1 ");
             return (T) this;
         }
         where.append(" AND ");
@@ -117,6 +118,7 @@ public abstract class SqlBuilder<T> {
 
     private T inSqlGenerate(String column,List list,String op){
         if( list== null || list.size() == 0){
+            where.append(" AND 0 = 1 ");
             return (T) this;
         }
         Object[] values = new Object[list.size()];

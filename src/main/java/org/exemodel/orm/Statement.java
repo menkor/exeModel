@@ -417,8 +417,7 @@ public abstract class Statement<T> extends SqlBuilder<T> {
       }
       if (index > 0) {
         byte[][] updateCachedFields = new byte[index + 1][];
-        updateCachedFields[0] = BinaryUtil
-            .generateKey(getModelMeta().getKey(), BinaryUtil.getBytes(id));
+        updateCachedFields[0] = BinaryUtil.generateKey(getModelMeta().getKey(), BinaryUtil.getBytes(id));
         System.arraycopy(bytes, 0, updateCachedFields, 1, index);
         getCache().update(updateCachedFields);
       }

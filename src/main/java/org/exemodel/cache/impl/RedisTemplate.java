@@ -73,8 +73,6 @@ public class RedisTemplate implements ICache {
     }
 
 
-
-
     @Override
     public ICache clone() {
         return new RedisTemplate(this.host,this.port,this.timeout,this.database,this.ssl);
