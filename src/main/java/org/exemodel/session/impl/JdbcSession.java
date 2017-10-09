@@ -95,7 +95,6 @@ public class JdbcSession extends AbstractSession {
       return;
     }
     try {
-      activeFlag.set(false);
       if (jdbcConnection != null) {
         jdbcConnection.close();
         jdbcConnection = null;

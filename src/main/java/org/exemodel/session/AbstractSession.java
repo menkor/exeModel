@@ -37,9 +37,6 @@ public abstract class AbstractSession implements Session {
 
     @Override
     public void commit() {
-        if (!isOpen()) {
-            begin();
-        }
         txStack.poll();
         if (getTransactionNestedLevel() > 0) {
             return;
@@ -55,9 +52,6 @@ public abstract class AbstractSession implements Session {
 
     @Override
     public void rollback() {
-        if (!isTransactionActive()) {
-            return;
-        }
         txStack.poll();
         if (getTransactionNestedLevel() > 0) {
             return;
@@ -71,9 +65,7 @@ public abstract class AbstractSession implements Session {
         return txStack.size();
     }
 
-    public boolean isTransactionActive() {
-        return getTransaction().isActive();
-    }
+
 
     private static transient SessionFactory defaultSessionFactory = null;
 

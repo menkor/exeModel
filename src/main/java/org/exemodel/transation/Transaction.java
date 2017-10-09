@@ -11,5 +11,7 @@ public interface Transaction {
 
     public void rollback();
 
-    public boolean isActive();
+    public void setIsolationLevel(Integer isolationLevel);
+
+
 }

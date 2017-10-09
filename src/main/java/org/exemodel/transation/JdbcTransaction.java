@@ -3,8 +3,11 @@ package org.exemodel.transation;
 import org.exemodel.session.impl.JdbcSession;
 import org.exemodel.exceptions.JdbcRuntimeException;
 
+import java.sql.SQLException;
+
 public class JdbcTransaction implements Transaction {
     private final JdbcSession jdbcSession;
+    private Integer isolationLevel = null;
 
 
     public JdbcTransaction(JdbcSession jdbcSession) {
@@ -14,16 +17,21 @@ public class JdbcTransaction implements Transaction {
     @Override
     public void begin() {
         jdbcSession.setAutoCommit(false);
-        jdbcSession.getActiveFlag().set(true);
+        try {
+            if(this.isolationLevel !=null){
+                jdbcSession.getJdbcConnection().setTransactionIsolation(isolationLevel);
+            }
+        } catch (SQLException e) {
+            throw new JdbcRuntimeException(e);
+        }
     }
 
     @Override
     public void commit() {
         try {
-            jdbcSession.getActiveFlag().set(true);
             jdbcSession.getJdbcConnection().commit();
-            jdbcSession.getActiveFlag().set(false);
             jdbcSession.setAutoCommit(true);
+            jdbcSession.close();
         } catch (Exception e) {
             throw new JdbcRuntimeException(e);
         }
@@ -31,19 +39,20 @@ public class JdbcTransaction implements Transaction {
 
     @Override
     public void rollback() {
-        if (jdbcSession.getActiveFlag().get()) {
-            return;
-        }
         try {
             jdbcSession.getActiveFlag().set(false);
             jdbcSession.getJdbcConnection().rollback();
+            jdbcSession.close();
         } catch (Exception e) {
             throw new JdbcRuntimeException(e);
         }
     }
 
-    @Override
-    public boolean isActive() {
-        return jdbcSession.getActiveFlag().get();
+    public Integer getIsolationLevel() {
+        return isolationLevel;
+    }
+
+    public void setIsolationLevel(Integer isolationLevel) {
+        this.isolationLevel = isolationLevel;
     }
 }

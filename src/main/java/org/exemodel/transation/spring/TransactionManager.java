@@ -1,9 +1,9 @@
 package org.exemodel.transation.spring;
 
 
-import org.exemodel.session.AbstractSession;
 import org.exemodel.session.Session;
 import org.exemodel.session.SessionFactory;
+import org.exemodel.transation.Transaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.TransactionDefinition;
@@ -22,14 +22,15 @@ public class TransactionManager extends AbstractPlatformTransactionManager {
 
     @Override
     protected Object doGetTransaction() throws TransactionException {
-        Session session = sessionFactory.currentSession();
-        AbstractSession.setDefaultSessionFactory(sessionFactory);
-        return session;
+        return sessionFactory.currentSession().getTransaction();
     }
 
     @Override
     protected void doBegin(Object o, TransactionDefinition transactionDefinition) throws TransactionException {
+        Transaction transaction = (Transaction) o;
+        transaction.setIsolationLevel(transactionDefinition.getIsolationLevel());
         sessionFactory.currentSession().begin();
+
     }
 
     @Override
@@ -44,11 +45,14 @@ public class TransactionManager extends AbstractPlatformTransactionManager {
 
     @Override
     protected void doCleanupAfterCompletion(Object transaction) {
-        Session session = (Session) transaction;
-        if(session == null) {
-            return;
-        }
+        Session session = sessionFactory.currentSession();
         session.close();
-
     }
+
+    @Override
+    protected boolean isExistingTransaction(Object transaction) throws TransactionException {
+        return sessionFactory.currentSession().isRunning();
+    }
+
+
 }
