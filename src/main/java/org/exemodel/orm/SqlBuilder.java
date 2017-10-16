@@ -23,12 +23,20 @@ public abstract class SqlBuilder<T> {
         return (T) this;
     }
 
+    public T andWhenNotNull(String column,String operation,Object value){
+        if(value==null){
+            return (T) this;
+        }
+        return and(column,operation,value);
+    }
+
     /**
      * equal
      */
     public T eq(String column, Object value){
         return (T)and(column,"=",value);
     }
+
 
     /**
      * not equal
@@ -37,10 +45,13 @@ public abstract class SqlBuilder<T> {
         return and(column,"<>",value);
     }
 
+
+
     /**
      *like
      */
     public T like(String column, Object value){return and(column," LIKE ",value);}
+
 
     /**
      * state equal
@@ -99,21 +110,8 @@ public abstract class SqlBuilder<T> {
             return (T) this;
         }
         where.append(" AND ");
-        where.append(column);
-        where.append(op);
-        where.append(" ( ");
-        boolean first = true;
-        for(Object value:values){
-            if(first){
-                where.append("?");
-                first = false;
-            }else {
-                where.append(",?");
-            }
-            parameterBindings.addIndexBinding(value);
-        }
-        where.append(") ");
-        return (T)this;
+        where.append(Expr.inSqlGenerator(op,column, values, parameterBindings));
+        return (T) this;
     }
 
     private T inSqlGenerate(String column,List list,String op){
@@ -176,15 +174,15 @@ public abstract class SqlBuilder<T> {
     }
 
 
-    public T orderBy(String orderBy){
+    public T orderBy(String columns){
         where.append(" ORDER BY ");
-        where.append(StringUtil.underscoreName(orderBy));
+        where.append(StringUtil.underscoreName(columns));
         return  (T)this;
     }
 
-    public T groupBy(String groupBy){
+    public T groupBy(String columns){
         where.append(" GROUP BY ");
-        where.append(StringUtil.underscoreName(groupBy));
+        where.append(StringUtil.underscoreName(columns));
         return (T) this;
     }
 
@@ -203,6 +201,10 @@ public abstract class SqlBuilder<T> {
     }
 
     public T or(Expr... exprArray){
+        if (exprArray == null || exprArray.length == 0 ) {
+            return (T) this;
+        }
+
         where.append(" AND (");
         boolean init =true;
         for(Expr expr:exprArray){
@@ -212,7 +214,7 @@ public abstract class SqlBuilder<T> {
                 where.append(" OR ");
             }
             where.append(expr.getSql());
-            parameterBindings.addIndexBinding(expr.getRight());
+            parameterBindings.extend(expr.getParameterBindings());
         }
         where.append(")");
         return (T)this;
