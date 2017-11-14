@@ -128,13 +128,13 @@ public abstract class SqlBuilder<T> {
     }
 
     public T in(String column,List values){
-        return in(column,values);
+        return inSqlGenerate(column,values," IN ");
     }
 
 
 
     public T notIn(String column,List values){
-        return notIn(column,values);
+        return inSqlGenerate(column,values," NOT IN ");
     }
 
 

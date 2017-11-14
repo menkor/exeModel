@@ -1,40 +1,41 @@
 package org.exemodel.session.impl;
 
-import org.exemodel.cache.ICache;
-import org.exemodel.session.AbstractSession;
-import org.exemodel.transation.JdbcTransaction;
-import org.exemodel.transation.Transaction;
-import org.exemodel.exceptions.JdbcRuntimeException;
-import org.exemodel.orm.ExecutableModel;
-import org.exemodel.orm.ModelMeta;
-import org.exemodel.orm.FieldAccessor;
-import org.exemodel.util.NumberUtil;
-import org.exemodel.util.Pagination;
-import org.exemodel.util.ParameterBindings;
-import org.exemodel.util.StringUtil;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.commons.dbutils.QueryRunner;
 import org.apache.commons.dbutils.ResultSetHandler;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import java.sql.*;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
+import org.exemodel.cache.ICache;
+import org.exemodel.exceptions.JdbcRuntimeException;
+import org.exemodel.orm.ExecutableModel;
+import org.exemodel.orm.FieldAccessor;
+import org.exemodel.orm.ModelMeta;
+import org.exemodel.session.AbstractSession;
+import org.exemodel.transation.JdbcTransaction;
+import org.exemodel.transation.Transaction;
+import org.exemodel.util.NumberUtil;
+import org.exemodel.util.Pagination;
+import org.exemodel.util.ParameterBindings;
+import org.exemodel.util.StringUtil;
 
 @SuppressWarnings("unchecked")
 public class JdbcSession extends AbstractSession {
 
+    public static Log logger = LogFactory.getLog(JdbcSession.class);
     private Connection jdbcConnection;
     private JdbcSessionFactory jdbcSessionFactory;
     private AtomicBoolean activeFlag = new AtomicBoolean(false);
     private transient boolean isInBatch = false;
     private transient boolean isInCacheBatch = false;
     private transient PreparedStatement batchStatement;
-    public static Log logger = LogFactory.getLog(JdbcSession.class);
-
-    public AtomicBoolean getActiveFlag() {
-        return activeFlag;
-    }
 
     public JdbcSession(Connection jdbcConnection) {
         this.jdbcConnection = jdbcConnection;
@@ -42,6 +43,14 @@ public class JdbcSession extends AbstractSession {
 
     public JdbcSession(JdbcSessionFactory jdbcSessionFactory) {
         this.jdbcSessionFactory = jdbcSessionFactory;
+    }
+
+    private static ResultSetHandler<List<Object>> getListResultSetHandler(ModelMeta modelMeta) {
+        return new JdbcOrmBeanListHandler(modelMeta.getModelCls(), modelMeta);
+    }
+
+    public AtomicBoolean getActiveFlag() {
+        return activeFlag;
     }
 
     public synchronized Connection getJdbcConnection() {
@@ -56,17 +65,17 @@ public class JdbcSession extends AbstractSession {
         return jdbcConnection;
     }
 
-    public void setAutoCommit(boolean autoCommit) {
+    public boolean getAutoCommit() {
         try {
-            getJdbcConnection().setAutoCommit(autoCommit);
+            return getJdbcConnection().getAutoCommit();
         } catch (SQLException e) {
             throw new JdbcRuntimeException(e);
         }
     }
 
-    public boolean getAutoCommit() {
+    public void setAutoCommit(boolean autoCommit) {
         try {
-            return getJdbcConnection().getAutoCommit();
+            getJdbcConnection().setAutoCommit(autoCommit);
         } catch (SQLException e) {
             throw new JdbcRuntimeException(e);
         }
@@ -95,6 +104,7 @@ public class JdbcSession extends AbstractSession {
             return;
         }
         try {
+            activeFlag.set(false);
             if (jdbcConnection != null) {
                 jdbcConnection.close();
                 jdbcConnection = null;
@@ -169,6 +179,7 @@ public class JdbcSession extends AbstractSession {
                         .prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
                 setStatementAllField(modelMeta, preparedStatement, entity, false);
                 int changedCount = preparedStatement.executeUpdate();
+
                 if (changedCount < 1) {
                     return false;
                 }
@@ -187,6 +198,7 @@ public class JdbcSession extends AbstractSession {
                             generatedKeysResultSet.close();
                         }
                     }
+                    // save to Search Engine
                 }
             } catch (SQLException e) {
                 throw new JdbcRuntimeException(e);
@@ -208,7 +220,6 @@ public class JdbcSession extends AbstractSession {
         }
         return true;
     }
-
 
     @Override
     public boolean update(final ExecutableModel entity) {
@@ -239,7 +250,8 @@ public class JdbcSession extends AbstractSession {
 
                 }
                 preparedStatement.setObject(i, id);
-                return preparedStatement.executeUpdate() > 0;
+                boolean res = preparedStatement.executeUpdate() > 0;
+                return res;
             } catch (SQLException e) {
                 throw new JdbcRuntimeException(e);
             } finally {
@@ -268,7 +280,6 @@ public class JdbcSession extends AbstractSession {
             }
         }
     }
-
 
     @Override
     public boolean update(ExecutableModel entity, String... columns) {
@@ -391,13 +402,11 @@ public class JdbcSession extends AbstractSession {
     public int[] executeBatch() {
         if (isInBatch) {
             try {
-                isInBatch = false;
                 int[] res = null;
                 if (batchStatement != null) {
                     res = batchStatement.executeBatch();
                 }
                 if (isInCacheBatch) {
-                    isInCacheBatch = false;
                     getCache().executeBatch();
                 }
                 return res;
@@ -411,7 +420,6 @@ public class JdbcSession extends AbstractSession {
             throw new JdbcRuntimeException("Not in batch");
         }
     }
-
 
     @Override
     public boolean updateBatch(List<? extends ExecutableModel> entities) {
@@ -440,20 +448,21 @@ public class JdbcSession extends AbstractSession {
     public boolean saveBatch(List<? extends ExecutableModel> entities) {
         int len = 0;
         if (entities.size() != 0) {
-            this.isInBatch = true;
             ExecutableModel tmp = entities.get(0);
             ModelMeta modelMeta = ModelMeta.getModelMeta(tmp.getClass());
-            for (ExecutableModel entity : entities) {
-                save(entity);
-
-            }
-            this.isInBatch = false;
-            FieldAccessor idAccessor = modelMeta.getIdAccessor();
             try {
+                this.isInBatch = true;
+
+                for (ExecutableModel entity : entities) {
+                    save(entity);
+                }
+                FieldAccessor idAccessor = modelMeta.getIdAccessor();
                 int[] res = batchStatement.executeBatch();
                 if (res == null) {
+                    close();
                     return false;
                 }
+
                 len = res.length;
                 try (ResultSet generatedKeysResultSet = batchStatement.getGeneratedKeys()) {
                     int index = getIndexParamBaseOrdinal();
@@ -463,6 +472,7 @@ public class JdbcSession extends AbstractSession {
                             idAccessor.setProperty(entity, value);
                         }
                     }
+
                 }
             } catch (SQLException e) {
                 throw new JdbcRuntimeException(e.getMessage());
@@ -495,12 +505,6 @@ public class JdbcSession extends AbstractSession {
         }
         return len == entities.size();
     }
-
-
-    private static ResultSetHandler<List<Object>> getListResultSetHandler(ModelMeta modelMeta) {
-        return new JdbcOrmBeanListHandler(modelMeta.getModelCls(), modelMeta);
-    }
-
 
     /**
      * @param cls         return Type
@@ -636,7 +640,8 @@ public class JdbcSession extends AbstractSession {
             StringBuilder countSb = new StringBuilder("SELECT COUNT(*)");
             countSb.append(queryString.substring(fromIndex, lastOrderIndex));
             int count = 0;
-            List<Integer> counts = findListByNativeSql(Integer.class, countSb.toString(), parameterBindings);
+            List<Integer> counts = findListByNativeSql(Integer.class, countSb.toString(),
+                    parameterBindings);
             if (counts != null && counts.size() != 0) {
                 if (counts.size() > 1) { // with group by
                     count = counts.size();
@@ -769,11 +774,14 @@ public class JdbcSession extends AbstractSession {
 
     @Override
     public void execute(String sql) {
+        PreparedStatement preparedStatement = null;
         try {
-            PreparedStatement preparedStatement = getJdbcConnection().prepareStatement(sql);
+            preparedStatement = getJdbcConnection().prepareStatement(sql);
             preparedStatement.execute();
         } catch (SQLException e) {
             throw new JdbcRuntimeException(e);
+        }finally {
+            close(preparedStatement);
         }
 
     }
