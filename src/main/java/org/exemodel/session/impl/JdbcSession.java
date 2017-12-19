@@ -101,6 +101,8 @@ public class JdbcSession extends AbstractSession {
     @Override
     public void close() {
         if (getTransactionNestedLevel() > 0) {
+            isInBatch = false;
+            isInCacheBatch = false;
             return;
         }
         try {
@@ -452,11 +454,20 @@ public class JdbcSession extends AbstractSession {
             ModelMeta modelMeta = ModelMeta.getModelMeta(tmp.getClass());
             try {
                 this.isInBatch = true;
-
-                for (ExecutableModel entity : entities) {
-                    save(entity);
-                }
+                boolean hasId = false;
                 FieldAccessor idAccessor = modelMeta.getIdAccessor();
+                for (ExecutableModel entity : entities) {
+                     if(NumberUtil.isUndefined(idAccessor.getProperty(entity))){
+                         Object id = entity.generateId();
+                         if(id!=null){
+                             hasId = true;
+                             idAccessor.setProperty(entity,id);
+                         }
+                     }else{
+                         hasId = true;
+                     }
+                     save(entity);
+                }
                 int[] res = batchStatement.executeBatch();
                 if (res == null) {
                     close();
@@ -464,15 +475,16 @@ public class JdbcSession extends AbstractSession {
                 }
 
                 len = res.length;
-                try (ResultSet generatedKeysResultSet = batchStatement.getGeneratedKeys()) {
-                    int index = getIndexParamBaseOrdinal();
-                    for (Object entity : entities) {
-                        if (generatedKeysResultSet.next()) {
-                            Object value = generatedKeysResultSet.getObject(index);
-                            idAccessor.setProperty(entity, value);
+                if(!hasId){
+                    try (ResultSet generatedKeysResultSet = batchStatement.getGeneratedKeys()) {
+                        int index = getIndexParamBaseOrdinal();
+                        for (Object entity : entities) {
+                            if (generatedKeysResultSet.next()) {
+                                Object value = generatedKeysResultSet.getObject(index);
+                                idAccessor.setProperty(entity, value);
+                            }
                         }
                     }
-
                 }
             } catch (SQLException e) {
                 throw new JdbcRuntimeException(e.getMessage());

@@ -1,4 +1,3 @@
-import org.exemodel.orm.Statement;
 import org.exemodel.session.AbstractSession;
 import org.exemodel.session.Session;
 import org.exemodel.exceptions.JdbcRuntimeException;

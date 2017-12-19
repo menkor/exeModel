@@ -144,7 +144,7 @@ public abstract class Statement<T> extends SqlBuilder<T> {
         if (cached != null) {
           return (E) cached;
         }
-        ExecutableModel fromDb = getSession().findOneByNativeSql(this.modelClass, sql);
+        ExecutableModel fromDb = getSession().findOneByNativeSql(this.modelClass, sql,sqlParams);
         if (fromDb != null) {//save the whole cached model
           FieldAccessor fieldAccessor = modelMeta.getIdAccessor();
           fieldAccessor.setProperty(fromDb, key);

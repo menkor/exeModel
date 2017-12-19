@@ -1,6 +1,7 @@
 package org.exemodel.cache.impl;
 
 import org.apache.commons.collections.map.HashedMap;
+import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.exemodel.cache.ICache;
 import org.exemodel.cache.Promise;
 import org.exemodel.exceptions.JedisRuntimeException;
@@ -16,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.*;
 
+import java.lang.reflect.Field;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -88,6 +90,7 @@ public class RedisTemplate implements ICache {
         try {
             return jedisPool.getResource();
         } catch (Exception e) {
+            logger.warn("NumberActive:"+jedisPool.getNumActive()+" NumberIdle:"+jedisPool.getNumIdle()+" NumberWaiters:"+ jedisPool.getNumWaiters());
             throw new JedisRuntimeException("Get jedis error : " + e);
         } finally {
             lockJedis.unlock();
@@ -125,7 +128,6 @@ public class RedisTemplate implements ICache {
     public <K,V> Map<K,V> batchGet(K [] ids, Class<V> clazz, String... fields) {
         Jedis jedis = getJedis();
         ModelMeta modelMeta = ModelMeta.getModelMeta(clazz);
-        FieldAccessor idAccessor = modelMeta.getIdAccessor();
         Pipeline pipeline = jedis.pipelined();
         if(ids.length==0){
             return null;

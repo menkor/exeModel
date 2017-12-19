@@ -4,6 +4,7 @@ import org.exemodel.session.AbstractSession;
 import org.exemodel.session.Session;
 import org.exemodel.util.BinaryUtil;
 import org.exemodel.util.Function;
+import org.exemodel.util.NumberUtil;
 import org.exemodel.util.ParameterBindings;
 
 import java.io.Serializable;
@@ -31,6 +32,14 @@ public abstract class ExecutableModel implements Serializable{
      * @param session current session
      */
     public boolean save(Session session) {
+        FieldAccessor idAccessor = ModelMeta.getModelMeta(this.getClass()).getIdAccessor();
+        Object tmp = idAccessor.getProperty(this);
+        if(NumberUtil.isUndefined(tmp)){
+            Object id = generateId();
+            if(id!=null){
+                idAccessor.setProperty(this,id);
+            }
+        }
         boolean res = session.save(this);
         ModelMeta meta = ModelMeta.getModelMeta(this.getClass());
         if(meta.isCacheable()){
@@ -124,5 +133,9 @@ public abstract class ExecutableModel implements Serializable{
 
     public void setOperationFields(String[] operationFields) {
         this.operationFields = operationFields;
+    }
+
+    public Object generateId(){
+        return null;
     }
 }

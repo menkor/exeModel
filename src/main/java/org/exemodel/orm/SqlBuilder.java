@@ -57,7 +57,7 @@ public abstract class SqlBuilder<T> {
      * state equal
      */
     public T state(Object value){
-        return and("STATE","=",value);
+        return and("state","=",value);
     }
 
     /**

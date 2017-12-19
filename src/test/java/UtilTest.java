@@ -14,11 +14,9 @@ public class UtilTest {
 
     @Test
     public void testName() throws Exception{
-        int a = 0;
-        Class type = short[].class;
-        System.out.println(type.getName());
-        type = User[].class;
-        System.out.println(type.getName());
+        long a = 0;
+        Object b = a;
+        System.out.println(b instanceof Number);
     }
 
 }

@@ -16,7 +16,7 @@ public class InitResource  {
         jedisPoolConfig.setMaxIdle(100);
         jedisPoolConfig.setMaxTotal(300);
         jedisPoolConfig.setTestOnBorrow(true);
-        RedisTemplate redisTemplate = new RedisTemplate(jedisPoolConfig, "192.168.1.100", 6378, 2000, null,0,false);
+        RedisTemplate redisTemplate = new RedisTemplate(jedisPoolConfig, "192.168.1.100", 6378, 2000, "Superid123",0,false);
 
         dataSource = new DruidDataSource();
         dataSource.setDriverClassName("com.mysql.jdbc.Driver");
