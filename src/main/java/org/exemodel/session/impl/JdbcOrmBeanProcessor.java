@@ -179,7 +179,8 @@ public class JdbcOrmBeanProcessor extends BeanProcessor {
                         value = new Timestamp(tsValue.getTime());
                         ((Timestamp) value).setNanos(nanos);
                     }
-                } else if (value instanceof String && params[0].isEnum()) {
+                }
+                else if (value instanceof String && params[0].isEnum()) {
                     value = Enum.valueOf(params[0].asSubclass(Enum.class), (String) value);
                 }
 

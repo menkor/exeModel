@@ -100,27 +100,22 @@ public class JdbcSession extends AbstractSession {
 
     @Override
     public void close() {
-        if (getTransactionNestedLevel() > 0) {
+
+        try {
             isInBatch = false;
             isInCacheBatch = false;
-            return;
-        }
-        try {
-            activeFlag.set(false);
-            if (jdbcConnection != null) {
-                jdbcConnection.close();
-                jdbcConnection = null;
+            if (batchStatement != null) {
+                batchStatement.close();
+                batchStatement = null;
             }
-            if (isInBatch) {
-                if (batchStatement != null) {
-                    batchStatement.close();
-                    batchStatement = null;
+            getCache().endBatch();
+
+            if (getTransactionNestedLevel() == 0) {
+                activeFlag.set(false);
+                if (jdbcConnection != null) {
+                    jdbcConnection.close();
+                    jdbcConnection = null;
                 }
-                isInBatch = false;
-            }
-            if (isInCacheBatch) {
-                getCache().endBatch();
-                isInCacheBatch = false;
             }
         } catch (SQLException e) {
             throw new JdbcRuntimeException(e);
@@ -128,11 +123,9 @@ public class JdbcSession extends AbstractSession {
     }
 
     private void close(PreparedStatement statement) {
-        if (getTransactionNestedLevel() > 0) {
-            return;
-        }
         try {
-            if (jdbcConnection != null) {
+
+            if (getTransactionNestedLevel()==0&&jdbcConnection != null) {
                 jdbcConnection.close();
                 jdbcConnection = null;
             }

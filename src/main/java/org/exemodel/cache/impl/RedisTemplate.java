@@ -60,9 +60,9 @@ public class RedisTemplate implements ICache {
         }
         this.password = password;
         jedisPool = new JedisPool(jedisPoolConfig, host, port, timeout, password,database,ssl);
-        Jedis jedis = getJedis();
-        updateLuaSha = jedis.scriptLoad(updateLua);
-        jedis.close();
+        try(Jedis jedis = getJedis()) {
+            updateLuaSha = jedis.scriptLoad(updateLua);
+        }
     }
 
 
@@ -105,10 +105,10 @@ public class RedisTemplate implements ICache {
             promises.add(null);
             return true;
         }
-        Jedis jedis = getJedis();
-        String result = jedis.hmset(entity.generateKey(), map);
-        jedis.close();
-        return OK.equals(result);
+        try (Jedis jedis = getJedis()){
+            String result = jedis.hmset(entity.generateKey(), map);
+            return OK.equals(result);
+        }
     }
 
     @Override
@@ -126,15 +126,14 @@ public class RedisTemplate implements ICache {
 
     @Override
     public <K,V> Map<K,V> batchGet(K [] ids, Class<V> clazz, String... fields) {
-        Jedis jedis = getJedis();
         ModelMeta modelMeta = ModelMeta.getModelMeta(clazz);
-        Pipeline pipeline = jedis.pipelined();
         if(ids.length==0){
             return null;
         }
         Map<K,V> result = new HashedMap(ids.length);
 
-        try {
+        try (Jedis jedis = getJedis()){
+            Pipeline pipeline = jedis.pipelined();
             if (fields == null || fields.length == 0) {
                 fields = modelMeta.getCachedFields();
             }
@@ -181,8 +180,6 @@ public class RedisTemplate implements ICache {
         } catch (InstantiationException e) {
             logger.error(e.getMessage());
             return null;
-        }finally {
-            jedis.close();
         }
     }
 
@@ -207,21 +204,22 @@ public class RedisTemplate implements ICache {
             promises.add(null);
             return true;
         }
-        Jedis jedis = getJedis();
-        Long result = jedis.del(key);
-        jedis.close();
-        return result>0;
+        try(Jedis jedis = getJedis()) {
+            Long result = jedis.del(key);
+            return result>0;
+        }
     }
 
     @Override
     public boolean batchDelete(List<? extends ExecutableModel> entities) {
-        Jedis jedis = getJedis();
-        Pipeline pipeline = jedis.pipelined();
-        for (ExecutableModel model : entities) {
-            pipeline.del(model.generateKey());
+        try(Jedis jedis = getJedis()){
+            Pipeline pipeline = jedis.pipelined();
+            for (ExecutableModel model : entities) {
+                pipeline.del(model.generateKey());
+            }
+            pipeline.sync();
+            return true;
         }
-        pipeline.sync();
-        return true;
 
     }
 
@@ -267,8 +265,7 @@ public class RedisTemplate implements ICache {
         ModelMeta modelMeta = ModelMeta.getModelMeta(clazz);
         FieldAccessor idAccessor = modelMeta.getIdAccessor();
         byte[] key = BinaryUtil.generateKey(modelMeta.getKey(), BinaryUtil.getBytes(id));
-        Jedis jedis = getJedis();
-        try {
+        try(Jedis jedis = getJedis()) {
             Object result;
             if (fields == null || fields.length == 0) {
                 Map<byte[], byte[]> map = jedis.hgetAll(key);
@@ -289,8 +286,6 @@ public class RedisTemplate implements ICache {
         } catch (Exception e) {
             logger.error(e.getMessage());
             throw new JedisRuntimeException(e.getMessage());
-        }finally {
-            jedis.close();
         }
     }
 
@@ -312,8 +307,7 @@ public class RedisTemplate implements ICache {
             return (T) result;
         }
 
-        Jedis jedis = getJedis();
-        try {
+        try(Jedis jedis = getJedis()) {
             List<byte[]> list = jedis.hmget(key, bytes);
             Object result = generateObjectByList(modelMeta, list, fields);
             if(result!=null){
@@ -323,8 +317,6 @@ public class RedisTemplate implements ICache {
         } catch (Exception e) {
             logger.error(e.getMessage());
             throw new JedisRuntimeException(e.getMessage());
-        }finally {
-            jedis.close();
         }
     }
 
@@ -361,23 +353,23 @@ public class RedisTemplate implements ICache {
             promises.add(null);
             return true;
         }
-        Jedis jedis = getJedis();
-        Object result = jedis.evalsha(updateLuaSha, 1, argv) ;
-        jedis.close();
-        return  result!=null;
+        try(Jedis jedis = getJedis()){
+            Object result = jedis.evalsha(updateLuaSha, 1, argv) ;
+            return  result!=null;
+        }
     }
 
 
     @Override
     public boolean batchUpdate(List<? extends ExecutableModel> models) {
-        Jedis jedis = getJedis();
-        Pipeline pipeline = jedis.pipelined();
-        for (ExecutableModel model : models) {
-            pipeline.evalsha(updateLuaSha, 1, generateUpdateLuaAGRV(model));
+        try(Jedis jedis = getJedis()){
+            Pipeline pipeline = jedis.pipelined();
+            for (ExecutableModel model : models) {
+                pipeline.evalsha(updateLuaSha, 1, generateUpdateLuaAGRV(model));
+            }
+            pipeline.sync();
+            return true;
         }
-        pipeline.sync();
-        jedis.close();
-        return true;
     }
 
     public byte[][] generateZipMap(Object entity) {

@@ -369,7 +369,7 @@ public abstract class Statement<T> extends SqlBuilder<T> {
       fieldAccessor.setProperty(fromDb, id);
       getCache().save(fromDb);
     }
-    return null;
+    return (E)fromDb;
   }
 
   private String getFindSql(Object id, Object partitionId, ParameterBindings parameterBindings) {
