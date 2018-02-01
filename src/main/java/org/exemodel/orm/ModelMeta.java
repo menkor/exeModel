@@ -1,6 +1,6 @@
 package org.exemodel.orm;
 
-import org.exemodel.annotation.CacheOrder;
+import org.exemodel.annotation.CacheField;
 import org.exemodel.annotation.Cacheable;
 import org.exemodel.annotation.PartitionId;
 import org.exemodel.exceptions.JdbcRuntimeException;
@@ -30,6 +30,7 @@ public class ModelMeta {
     private ModelColumnMeta idColumnMeta;
     private ModelColumnMeta partitionColumn;
     private List<String> cacheColumnList;//{index:fieldName}
+
     /**
      * column info of orm model class, ignore all fieldNameBytes with @javax.sql.Transient
      */
@@ -47,20 +48,16 @@ public class ModelMeta {
 
     /**
      * init column meta and cache it
+     *
      * @return
      */
     private List<ModelColumnMeta> getColumnMetaList() {
 
         Field[] fields = modelCls.getDeclaredFields();
-        String[] indexes = null;
-        if (this.cacheable) {
-            indexes = new String[fields.length];
-            cacheColumnList = new ArrayList<>(fields.length);
-        }
         List<ModelColumnMeta> columnMetas = new ArrayList<>(fieldsNum);
         for (Field field : fields) {
             int modifiers = field.getModifiers();
-            if (Modifier.isStatic(modifiers)||Modifier.isTransient(modifiers)) {
+            if (Modifier.isStatic(modifiers) || Modifier.isTransient(modifiers)) {
                 continue;
             }
             FieldAccessor fieldAccessor = new FieldAccessor(modelCls, field.getName());
@@ -91,32 +88,10 @@ public class ModelMeta {
                 this.partitionColumn = columnMeta;
             }
 
-
-            if (this.cacheable && !columnMeta.isId) {
-                CacheOrder cacheField = fieldAccessor.getPropertyAnnotation(CacheOrder.class);
-                if (cacheField != null) {
-                    int order = cacheField.value();
-                    if (order > fields.length + 1) {
-                        throw new JdbcRuntimeException("value must <= fields.length");
-                    }
-                    if (indexes[order] != null) {
-                        throw new JdbcRuntimeException("Repeat value : " + order);
-                    }
-                    columnMeta.cacheOrder = BinaryUtil.toBytes(order);
-                    indexes[order] = columnMeta.columnName;
-                }
-            }
             columnMetas.add(columnMeta);
         }
 
-        if (cacheable) {
-            cacheColumnList = new ArrayList<>(indexes.length);
-            for (int i = 0, l = indexes.length; i < l; i++) {
-                if (indexes[i] != null) {
-                    cacheColumnList.add(indexes[i]);
-                }
-            }
-        }
+
         this.columnMetaList = columnMetas;
         return columnMetas;
     }
@@ -246,7 +221,7 @@ public class ModelMeta {
         ModelMeta modelMeta = modelMetaCache.get(modelCls);
         if (modelMeta == null) {
             synchronized (ModelMeta.class) {
-                if(modelMetaCache.get(modelCls)==null){
+                if (modelMetaCache.get(modelCls) == null) {
                     modelMetaCache.put(modelCls, new ModelMeta(modelCls));
                 }
             }
@@ -280,6 +255,7 @@ public class ModelMeta {
             this.key = BinaryUtil.toBytes(key + ':');
         }
         columnMetaList = getColumnMetaList();
+        getCacheColumnList();
 
     }
 
@@ -341,12 +317,32 @@ public class ModelMeta {
     }
 
     public List<String> getCacheColumnList() {
+        if (cacheColumnList == null) {
+            cacheColumnList = new ArrayList<>();
+            for (ModelColumnMeta columnMeta : this.columnMetaList) {
+                if (!columnMeta.isId) {
+                    CacheField cacheField = columnMeta.fieldAccessor.getPropertyAnnotation(CacheField.class);
+                    if (cacheField != null) {
+                        cacheColumnList.add(columnMeta.columnName);
+                    }
+
+                }
+            }
+            Collections.sort(cacheColumnList);
+            for (ModelColumnMeta columnMeta : this.columnMetaList) {
+                int index = cacheColumnList.indexOf(columnMeta.columnName);
+                if (index >= 0) {
+                    columnMeta.cacheOrder = BinaryUtil.toBytes(index);
+                }
+            }
+        }
         return cacheColumnList;
     }
 
     /**
      * translate fields to bytes user the field order
-     * @param fields 
+     *
+     * @param fields
      * @return
      */
     public byte[][] convertToBytes(String... fields) {
@@ -365,7 +361,7 @@ public class ModelMeta {
         String[] fields = new String[bytes.length];
         for (int i = 0, j = bytes.length; i < j; i++) {
             String field = cacheColumnList.get(bytes[i][0]);
-            if (field==null) {
+            if (field == null) {
                 return null;
             }
             fields[i] = field;
@@ -373,11 +369,11 @@ public class ModelMeta {
         return fields;
     }
 
-    public String[] getCachedFields(){
+    public String[] getCachedFields() {
         String[] res = new String[cacheColumnList.size()];
         int i = 0;
-        for(ModelColumnMeta columnMeta:columnMetaList){
-            if(columnMeta.cacheOrder!=null){
+        for (ModelColumnMeta columnMeta : columnMetaList) {
+            if (columnMeta.cacheOrder != null) {
                 res[i++] = columnMeta.fieldName;
             }
         }

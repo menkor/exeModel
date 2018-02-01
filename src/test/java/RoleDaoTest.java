@@ -1,8 +1,8 @@
+import model.User;
 import org.exemodel.session.AbstractSession;
 import org.exemodel.session.Session;
 import org.exemodel.util.Function;
 import model.Role;
-import org.exemodel.util.MapTo;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -65,8 +65,13 @@ public class RoleDaoTest {
         role.setTitle(newTitle);
         role.update();
 
-        Role role1 = CustomStatement.build(Role.class).findById(role.getId());
+        Role role1 = CustomStatement.build(Role.class).findCache(role.getId());
         Assert.assertTrue(role1.getTitle().equals(newTitle));
+
+        role1 = CustomStatement.build(Role.class).id(role.getId()).selectOne("title","permissions");
+
+        Assert.assertTrue(role1.getTitle().equals(newTitle));
+
     }
 
     private List<Role> getList(Session session) {
@@ -179,6 +184,31 @@ public class RoleDaoTest {
         Assert.assertTrue(role1.getPermissions().equals("set_by_object"));
         Assert.assertTrue(role1.getTitle().equals(role.getTitle()));
 
+    }
+
+
+    @Test
+    public void testInsert(){
+        Timer timer = new Timer();
+        for(int i=1;i<1000;i++){
+         User user = CustomStatement.build(User.class).id(i).selectOne();
+//            User user = new User();
+//            user.setName("zp");
+//            user.setAge(18);
+//            user.save();
+        }
+        timer.end();
+    }
+
+    @Test
+    public void testSelect(){
+        Timer timer = new Timer();
+        for(int i=1;i<1000;i++){
+            User.getSession().findOneByNativeSql(User.class,
+                    "select * from role r join user u on r.user_id = u.id where u.name= ? limit 1",
+                     "zp");
+        }
+        timer.end();
     }
 
 }

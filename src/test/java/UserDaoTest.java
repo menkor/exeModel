@@ -1,3 +1,4 @@
+import com.alibaba.druid.support.json.JSONUtils;
 import org.exemodel.session.AbstractSession;
 import org.exemodel.session.Session;
 import org.exemodel.exceptions.JdbcRuntimeException;
@@ -5,7 +6,6 @@ import org.exemodel.orm.ExecutableModel;
 import org.exemodel.util.Expr;
 import org.exemodel.util.Pagination;
 import org.exemodel.util.ParameterBindings;
-import junit.framework.TestCase;
 import model.Role;
 import model.User;
 import org.junit.Assert;
@@ -19,7 +19,7 @@ import java.util.List;
 /**
  * Created by zp on 2016/7/20.
  */
-public class UserDaoTest extends TestCase {
+public class UserDaoTest{
     static {
         new InitResource();
     }
@@ -27,6 +27,7 @@ public class UserDaoTest extends TestCase {
 //        User user = User.findById()
     }
 
+    @Test
     public User testSave() {
         User user = new User();
         user.setName("zp");
@@ -37,15 +38,17 @@ public class UserDaoTest extends TestCase {
     }
 
 
+    @Test
     public void testUpdate() {
-        User user = CustomStatement.build(User.class).findById(1);
+        User user = testSave();
         user.setAge(25);
         user.update();
-        User _user = CustomStatement.build(User.class).findById(1);
+        User _user = CustomStatement.build(User.class).findById(user.getId());
         Assert.assertTrue(_user.getAge() == 25);
     }
 
 
+    @Test
     public void testDelete() {
         User user = new User();
         user.setName("src/test");
@@ -56,17 +59,20 @@ public class UserDaoTest extends TestCase {
     }
 
 
+    @Test
     public void testFindList() {
         List<User> list = CustomStatement.build(User.class).findListByNativeSql("select * from user where name=?", "zp");
         Assert.assertTrue(list != null);
     }
 
+    @Test
     public void testFindOne() {
         testSave();
         User user = CustomStatement.build(User.class).findOneByNativeSql("select id,name as idCard from user where name=? and age =? limit 1 ", "zp",18);
         Assert.assertTrue(user != null);
     }
 
+    @Test
     public void testSelectOne() {
         testSave();
         User user = CustomStatement.build(User.class).eq("name", "xxf").selectOne("id", "name");
@@ -74,6 +80,7 @@ public class UserDaoTest extends TestCase {
     }
 
 
+    @Test
     public void testSelectList() {
         List<User> users = CustomStatement.build(User.class).eq("name", "zp").asc("age").selectList("id","name");
         Assert.assertTrue(users != null);
@@ -82,6 +89,8 @@ public class UserDaoTest extends TestCase {
 
     }
 
+
+    @Test
     public void testOrConditions(){
         List<User> users1 = CustomStatement.build(User.class).or(Expr.eq("name","zp"),Expr.eq("name","xxf")).selectList();
         String[] names ={"zp","xxf"};
@@ -90,6 +99,7 @@ public class UserDaoTest extends TestCase {
 
     }
 
+    @Test
     public void testRemove() {
         User user = new User();
         user.setAge(33);
@@ -101,6 +111,7 @@ public class UserDaoTest extends TestCase {
 
     }
 
+    @Test
     public void testHashMapFromEntity() {
         User user = new User();
         user.setName("src/test");
@@ -116,6 +127,7 @@ public class UserDaoTest extends TestCase {
     }
 
 
+    @Test
     public void testSet() {
         User user = new User();
         user.setAge(33);
@@ -131,6 +143,7 @@ public class UserDaoTest extends TestCase {
 
     }
 
+    @Test
     public void testTransaction(){
         Session session = AbstractSession.currentSession();
         session.begin();
@@ -141,6 +154,7 @@ public class UserDaoTest extends TestCase {
     }
 
 
+    @Test
     public void testExecute() {
         User.executeUpdate("update user set name=? where name='zp'", new ParameterBindings("jzy"));
         Assert.assertTrue(CustomStatement.build(User.class).eq("name", "zp").selectOne() == null);
@@ -148,6 +162,7 @@ public class UserDaoTest extends TestCase {
 
 
 
+    @Test
     public void testCopy() {
         UserAddForm userAddForm = new UserAddForm();
         userAddForm.setName("zp");
@@ -162,6 +177,7 @@ public class UserDaoTest extends TestCase {
 
     }
 
+    @Test
     public void testPagination() {
         Pagination pagination = new Pagination();
         pagination.setPage(1);
@@ -172,6 +188,7 @@ public class UserDaoTest extends TestCase {
 
     }
 
+    @Test
     public void testUpdateWithPartition(){
         User user=testSave();
         Role role = new Role();
@@ -187,6 +204,7 @@ public class UserDaoTest extends TestCase {
         Assert.assertTrue(role.getUserId()==user.getId());
     }
 
+    @Test
     public void testDeleteWithPartition(){
         User user=testSave();
         Role role = new Role();
@@ -213,13 +231,13 @@ public class UserDaoTest extends TestCase {
 
     }
 
-
-    @Test(threadPoolSize = 10, invocationCount = 11)
+    @Test
     public void testMutilThread() {
+        CustomStatement.build(User.class).isNotNull("id").remove();
     }
 
 
-    @org.junit.Test
+    @Test
     public void testExecuteBatch(){
         List<ExecutableModel> users = new ArrayList<>();
         for(int i=0;i<10;i++){
@@ -242,14 +260,5 @@ public class UserDaoTest extends TestCase {
     }
 
 
-    @org.junit.Test
-    public void testIsNull(){
 
-    }
-
-    @org.junit.Test
-    public void testRedisBatch(){
-
-
-    }
 }

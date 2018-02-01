@@ -7,6 +7,5 @@ import java.lang.annotation.ElementType;
  */
 @java.lang.annotation.Target({ElementType.FIELD, ElementType.METHOD})
 @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
-public @interface CacheOrder {
-    int value();//start with 0,must <= the length of fields
+public @interface CacheField {
 }

@@ -208,6 +208,9 @@ public abstract class SqlBuilder<T> {
         where.append(" AND (");
         boolean init =true;
         for(Expr expr:exprArray){
+            if(expr==null){
+                continue;
+            }
             if(init){
                 init = false;
             }else{

@@ -1,6 +1,6 @@
 package model;
 
-import org.exemodel.annotation.CacheOrder;
+import org.exemodel.annotation.CacheField;
 import org.exemodel.annotation.Cacheable;
 import org.exemodel.annotation.PartitionId;
 import org.exemodel.orm.ExecutableModel;
@@ -30,7 +30,7 @@ public class Role extends ExecutableModel{
 
 
     @PartitionId
-    @CacheOrder(value = 0)
+    @CacheField
     public int getUserId() {
         return userId;
     }
@@ -39,7 +39,7 @@ public class Role extends ExecutableModel{
         this.userId = userId;
     }
 
-    @CacheOrder(value = 1)
+    @CacheField
     public String getTitle() {
         return title;
     }
@@ -56,7 +56,7 @@ public class Role extends ExecutableModel{
         this.details = details;
     }
 
-    @CacheOrder(value = 2)
+    @CacheField
     public String getPermissions() {
         return permissions;
     }

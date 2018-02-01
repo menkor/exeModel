@@ -127,6 +127,7 @@ public class JdbcSession extends AbstractSession {
 
             if (getTransactionNestedLevel()==0&&jdbcConnection != null) {
                 jdbcConnection.close();
+
                 jdbcConnection = null;
             }
             if (statement != null) {
