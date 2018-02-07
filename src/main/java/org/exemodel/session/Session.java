@@ -122,7 +122,7 @@ public interface Session extends AutoCloseable{
      * @param <T>
      * @return T
      */
-    <T> T find(Class<?> cls, Object id);
+    <T> T find(Class<? extends T> cls, Object id);
 
 
     /**
@@ -133,7 +133,7 @@ public interface Session extends AutoCloseable{
      * @param <T>
      * @return
      */
-    <T> T find(Class<?> cls, Object id, Object partitionId);
+    <T> T find(Class<? extends T> cls, Object id, Object partitionId);
 
 
     /**
@@ -151,7 +151,7 @@ public interface Session extends AutoCloseable{
      * @param <T>
      * @return T
      */
-    <T> T findOneByNativeSql(Class<?> cls, String queryString, Object... params);
+    <T> T findOneByNativeSql(Class<? extends T> cls, String queryString, Object... params);
 
 
     /**
@@ -162,7 +162,7 @@ public interface Session extends AutoCloseable{
      * @param <T>
      * @return
      */
-    <T> T findListByNativeSql(Class<?> cls, String queryString, Object... params);
+    <T> List<T> findListByNativeSql(Class<? extends T> cls, String queryString, Object... params);
 
     /**
      * use sql to query list
@@ -173,7 +173,7 @@ public interface Session extends AutoCloseable{
      * @param <T>
      * @return
      */
-    <T> T findListByNativeSql(Class<?> cls, String queryString, ParameterBindings parameterBindings,
+    <T> List<T> findListByNativeSql(Class<? extends T> cls, String queryString, ParameterBindings parameterBindings,
         Pagination pagination);
 
     /**
@@ -184,7 +184,7 @@ public interface Session extends AutoCloseable{
      * @param <T>
      * @return
      */
-    <T> T findOneByNativeSql(Class<?> cls, String queryString, ParameterBindings parameterBindings);
+    <T> T findOneByNativeSql(Class<? extends T> cls, String queryString, ParameterBindings parameterBindings);
 
     /**
      *use sql to query list
@@ -194,7 +194,7 @@ public interface Session extends AutoCloseable{
      * @param <T>
      * @return
      */
-    <T> T findListByNativeSql(Class<?> cls, String queryString, ParameterBindings parameterBindings);
+    <T> List<T> findListByNativeSql(Class<? extends T> cls, String queryString, ParameterBindings parameterBindings);
 
     /**
      * update db
@@ -238,5 +238,5 @@ public interface Session extends AutoCloseable{
 
     void batchDeleteCache(List<ExecutableModel> models);
 
-    void execute(String sql);
+    boolean execute(String sql);
 }

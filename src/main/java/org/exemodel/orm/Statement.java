@@ -37,7 +37,7 @@ public abstract class Statement<T> extends SqlBuilder<T> {
   public Statement() {
   }
 
-  protected void setModelClass(Class<?> modelClass) {
+  protected void setModelClass(Class<? extends ExecutableModel> modelClass) {
     this.modelClass = modelClass;
   }
 
@@ -59,19 +59,19 @@ public abstract class Statement<T> extends SqlBuilder<T> {
   }
 
   public <E> E findOneByNativeSql(String sql, Object... params) {
-    return getSession().findOneByNativeSql(this.modelClass, sql, params);
+    return (E) getSession().findOneByNativeSql(this.modelClass, sql, params);
   }
 
-  public <E> E findListByNativeSql(String sql, Object... params) {
-    return getSession().findListByNativeSql(this.modelClass, sql, params);
+  public <E> List<E> findListByNativeSql(String sql, Object... params) {
+    return (List<E>)getSession().findListByNativeSql(this.modelClass, sql, params);
   }
 
   public <E> E findOneByNativeSql(String sql, ParameterBindings parameterBindings) {
-    return getSession().findOneByNativeSql(this.modelClass, sql, parameterBindings);
+    return (E)getSession().findOneByNativeSql(this.modelClass, sql, parameterBindings);
   }
 
-  public <E> E findListByNativeSql(String sql, ParameterBindings parameterBindings) {
-    return getSession().findListByNativeSql(this.modelClass, sql, parameterBindings);
+  public <E> List<E> findListByNativeSql(String sql, ParameterBindings parameterBindings) {
+    return (List<E>)getSession().findListByNativeSql(this.modelClass, sql, parameterBindings);
   }
 
   public <E> E findById(Object id) {
@@ -79,7 +79,7 @@ public abstract class Statement<T> extends SqlBuilder<T> {
   }
 
   public <E> E findById(Object id, Object partitionId) {
-    return getSession().find(modelClass, id, partitionId);
+    return (E)getSession().find(modelClass, id, partitionId);
   }
 
 
@@ -89,29 +89,29 @@ public abstract class Statement<T> extends SqlBuilder<T> {
 
   public int count() {
     String sql = " SELECT count(id) FROM " + getModelMeta().getTableName() + where;
-    List<Integer> res = getSession().findListByNativeSql(Integer.class, sql, parameterBindings);
+    List<Long> res = getSession().findListByNativeSql(Long.class, sql, parameterBindings);
     if(res==null||res.size()==0){
       return 0;
     }
     if(res.size()==1){
-      return res.get(0);
+      return res.get(0).intValue();
     }
     return res.size();
   }
 
 
-  public <E> E selectByPagination(Pagination pagination, String... fields) {
+  public <E> List<E> selectByPagination(Pagination pagination, String... fields) {
     String sql = findList(getModelMeta().getTableName(), fields);
-    return getSession().findListByNativeSql(this.modelClass, sql, parameterBindings, pagination);
+    return (List<E>) getSession().findListByNativeSql(this.modelClass, sql, parameterBindings, pagination);
   }
 
-  public <E> E selectList(String... fields) {
+  public <E> List<E> selectList(String... fields) {
     return this.selectList(this.modelClass, fields);
   }
 
-  public <E> E selectList(Class<?> modelClass, String... fields) {
+  public <E> List<E> selectList(Class<?> modelClass, String... fields) {
     String sql = findList(getModelMeta().getTableName(), fields);
-    return getSession().findListByNativeSql(modelClass, sql, parameterBindings);
+    return (List<E>)getSession().findListByNativeSql(modelClass, sql, parameterBindings);
   }
 
   public <E> E selectOne(final Class modelClass, String... fields) {
@@ -144,7 +144,7 @@ public abstract class Statement<T> extends SqlBuilder<T> {
         if (cached != null) {
           return (E) cached;
         }
-        ExecutableModel fromDb = getSession().findOneByNativeSql(this.modelClass, sql,sqlParams);
+        ExecutableModel fromDb = (ExecutableModel)getSession().findOneByNativeSql(this.modelClass, sql,sqlParams);
         if (fromDb != null) {//save the whole cached model
           FieldAccessor fieldAccessor = modelMeta.getIdAccessor();
           fieldAccessor.setProperty(fromDb, key);
@@ -161,7 +161,7 @@ public abstract class Statement<T> extends SqlBuilder<T> {
         }
       }
     }
-    return getSession().findOneByNativeSql(modelClass, findOne(modelMeta.getTableName(), fields),
+    return (E)getSession().findOneByNativeSql(modelClass, findOne(modelMeta.getTableName(), fields),
         parameterBindings);
   }
 
@@ -341,7 +341,7 @@ public abstract class Statement<T> extends SqlBuilder<T> {
       try {
         final ParameterBindings parameterBindings = new ParameterBindings();
         final String sql = getFindSql(id, partitionId, parameterBindings);
-        ExecutableModel res = (ExecutableModel) this.modelClass.newInstance();
+        ExecutableModel res =  (ExecutableModel)this.modelClass.newInstance();
         Promise promise = new Promise(res) {
           @Override
           public Object onFail() {
@@ -363,7 +363,7 @@ public abstract class Statement<T> extends SqlBuilder<T> {
     }
     ParameterBindings parameterBindings = new ParameterBindings();
     final String sql = getFindSql(id, partitionId, parameterBindings);
-    ExecutableModel fromDb = getSession().findOneByNativeSql(modelClass, sql, parameterBindings);
+    ExecutableModel fromDb = (ExecutableModel)getSession().findOneByNativeSql(modelClass, sql, parameterBindings);
     if (fromDb != null) {
       FieldAccessor fieldAccessor = modelMeta.getIdAccessor();
       fieldAccessor.setProperty(fromDb, id);

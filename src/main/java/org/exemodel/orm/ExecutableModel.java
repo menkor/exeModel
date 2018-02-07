@@ -126,8 +126,9 @@ public abstract class ExecutableModel implements Serializable{
         return operationFields;
     }
 
-    public <T> T load(Object id){
-        return getSession().find(this.getClass(),id);
+    public void load(Object id){
+        ExecutableModel model = getSession().find(this.getClass(),id);
+        this.copyPropertiesFrom(model);
     }
     
 

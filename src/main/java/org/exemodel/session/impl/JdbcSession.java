@@ -3,14 +3,11 @@ package org.exemodel.session.impl;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.commons.dbutils.QueryRunner;
-import org.apache.commons.dbutils.ResultSetHandler;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.exemodel.cache.ICache;
@@ -36,6 +33,7 @@ public class JdbcSession extends AbstractSession {
     private transient boolean isInBatch = false;
     private transient boolean isInCacheBatch = false;
     private transient PreparedStatement batchStatement;
+    private static BeanProcessor beanProcessor = new BeanProcessor();
 
     public JdbcSession(Connection jdbcConnection) {
         this.jdbcConnection = jdbcConnection;
@@ -45,9 +43,6 @@ public class JdbcSession extends AbstractSession {
         this.jdbcSessionFactory = jdbcSessionFactory;
     }
 
-    private static ResultSetHandler<List<Object>> getListResultSetHandler(ModelMeta modelMeta) {
-        return new JdbcOrmBeanListHandler(modelMeta.getModelCls(), modelMeta);
-    }
 
     public AtomicBoolean getActiveFlag() {
         return activeFlag;
@@ -125,7 +120,7 @@ public class JdbcSession extends AbstractSession {
     private void close(PreparedStatement statement) {
         try {
 
-            if (getTransactionNestedLevel()==0&&jdbcConnection != null) {
+            if (getTransactionNestedLevel() == 0 && jdbcConnection != null) {
                 jdbcConnection.close();
 
                 jdbcConnection = null;
@@ -187,8 +182,8 @@ public class JdbcSession extends AbstractSession {
                         ResultSet generatedKeysResultSet = preparedStatement.getGeneratedKeys();
                         try {
                             if (generatedKeysResultSet.next()) {
-                                Object generatedId = generatedKeysResultSet.getObject(1);
-                                idAccessor.setProperty(entity, generatedId);
+                                Object generatedId = generatedKeysResultSet.getLong(1);
+                                setGeneratedId(idAccessor,entity,generatedId);
                             }
                         } finally {
                             generatedKeysResultSet.close();
@@ -451,16 +446,16 @@ public class JdbcSession extends AbstractSession {
                 boolean hasId = false;
                 FieldAccessor idAccessor = modelMeta.getIdAccessor();
                 for (ExecutableModel entity : entities) {
-                     if(NumberUtil.isUndefined(idAccessor.getProperty(entity))){
-                         Object id = entity.generateId();
-                         if(id!=null){
-                             hasId = true;
-                             idAccessor.setProperty(entity,id);
-                         }
-                     }else{
-                         hasId = true;
-                     }
-                     save(entity);
+                    if (NumberUtil.isUndefined(idAccessor.getProperty(entity))) {
+                        Object id = entity.generateId();
+                        if (id != null) {
+                            hasId = true;
+                            idAccessor.setProperty(entity, id);
+                        }
+                    } else {
+                        hasId = true;
+                    }
+                    save(entity);
                 }
                 int[] res = batchStatement.executeBatch();
                 if (res == null) {
@@ -469,13 +464,13 @@ public class JdbcSession extends AbstractSession {
                 }
 
                 len = res.length;
-                if(!hasId){
+                if (!hasId) {
                     try (ResultSet generatedKeysResultSet = batchStatement.getGeneratedKeys()) {
                         int index = getIndexParamBaseOrdinal();
                         for (Object entity : entities) {
                             if (generatedKeysResultSet.next()) {
                                 Object value = generatedKeysResultSet.getObject(index);
-                                idAccessor.setProperty(entity, value);
+                                setGeneratedId(idAccessor,entity,value);
                             }
                         }
                     }
@@ -517,7 +512,7 @@ public class JdbcSession extends AbstractSession {
      * @param partitionId Distributed db partitionId
      */
     @Override
-    public <T> T find(Class<?> cls, Object id, Object partitionId) {
+    public <T> T find(Class<? extends T> cls, Object id, Object partitionId) {
         ModelMeta modelMeta = ModelMeta.getModelMeta(cls);
         String sql;
         boolean withPartitionId = false;
@@ -545,14 +540,8 @@ public class JdbcSession extends AbstractSession {
                 preparedStatement.setObject(i++, partitionId);
             }
             preparedStatement.setObject(i, id);
-            ResultSetHandler<List<Object>> handler = getListResultSetHandler(modelMeta);
             ResultSet resultSet = preparedStatement.executeQuery();
-            List result = handler.handle(resultSet);
-            if (result.size() > 0) {
-                return (T) result.get(0);
-            } else {
-                return null;
-            }
+            return beanProcessor.toBean(resultSet, cls);
         } catch (SQLException e) {
             throw new JdbcRuntimeException(e);
         } finally {
@@ -565,17 +554,16 @@ public class JdbcSession extends AbstractSession {
      * 根据id查找model
      */
     @Override
-    public <T> T find(Class<?> cls, Object id) {
+    public <T> T find(Class<? extends T> cls, Object id) {
         return find(cls, id, null);
     }
 
 
     @Override
-    public <T> T findListByNativeSql(Class<?> cls, String queryString, Object... params) {
+    public <T> List<T> findListByNativeSql(Class<? extends T> cls, String queryString, Object... params) {
         try {
-            QueryRunner runner = new QueryRunner();
-            ResultSetHandler<List<Object>> handler = getListResultSetHandler(ModelMeta.getModelMeta(cls));
-            return (T) runner.query(getJdbcConnection(), queryString, handler, params);
+            ResultSet resultSet = query(queryString, params);
+            return beanProcessor.toBeanList(resultSet, cls);
         } catch (SQLException e) {
             throw new JdbcRuntimeException(e);
         } finally {
@@ -584,55 +572,13 @@ public class JdbcSession extends AbstractSession {
 
     }
 
-    public <T> T findList(Class<?> cls, String queryString, Object... params) {
-        PreparedStatement preparedStatement = null;
-        int i = getIndexParamBaseOrdinal();
-        try {
-            preparedStatement = getJdbcConnection().prepareStatement(queryString);
-            for (Object p : params) {
-                preparedStatement.setObject(i++, p);
-            }
-            ResultSet resultSet = preparedStatement.executeQuery();
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    public <T> T findOne(Class<?> cls, String queryString, Object... params) {
-        PreparedStatement preparedStatement = null;
-        int i = getIndexParamBaseOrdinal();
-        try {
-            preparedStatement = getJdbcConnection().prepareStatement(queryString);
-            for (Object p : params) {
-                preparedStatement.setObject(i++, p);
-            }
-            ResultSet resultSet = preparedStatement.executeQuery();
-            if (resultSet.next()) {
-                ResultSetMetaData metaData = resultSet.getMetaData();
-                int count = metaData.getColumnCount();
-                for (int j = 0; j < count; j++) {
-                    String columnName = metaData.getColumnLabel(j + 1);
-                    if (null == columnName || 0 == columnName.length()) {
-                        columnName = metaData.getColumnName(j + 1);
-                    }
-                }
-            }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
     /**
      * @param queryString should not append (limit ? , ?) string,limit string generate in this method
      * @return list, the total number is set in pagination
      */
     @Override
-    public <T> T findListByNativeSql(Class<?> cls, String queryString,
-                                     ParameterBindings parameterBindings, Pagination pagination) {
+    public <T> List<T> findListByNativeSql(Class<? extends T> cls, String queryString,
+                                           ParameterBindings parameterBindings, Pagination pagination) {
         queryString = queryString.toUpperCase();
         int lastOrderIndex = queryString.lastIndexOf(" ORDER BY");
         int lastRightBracketIndex = queryString.lastIndexOf(")");
@@ -640,13 +586,12 @@ public class JdbcSession extends AbstractSession {
             throw new JdbcRuntimeException("Pagination query need order by one column");
         }
 
-        //查询总量
         if (pagination.isNeedTotal()) {
             int fromIndex = queryString.indexOf(" FROM");
             StringBuilder countSb = new StringBuilder("SELECT COUNT(*)");
             countSb.append(queryString.substring(fromIndex, lastOrderIndex));
-            int count = 0;
-            List<Integer> counts = findListByNativeSql(Integer.class, countSb.toString(),
+            long count = 0;
+            List<Long> counts = findListByNativeSql(Long.class, countSb.toString(),
                     parameterBindings);
             if (counts != null && counts.size() != 0) {
                 if (counts.size() > 1) { // with group by
@@ -660,32 +605,25 @@ public class JdbcSession extends AbstractSession {
             pagination.setTotal(-1);
         }
 
-        //按分页查询列表
         StringBuilder querySb = new StringBuilder(queryString);
         querySb.append(" LIMIT ? , ?");
         parameterBindings.addIndexBinding(pagination.getOffset());
         parameterBindings.addIndexBinding(pagination.getSize());
-        List list = findListByNativeSql(cls, querySb.toString(), parameterBindings);
+        List<T> list = findListByNativeSql(cls, querySb.toString(), parameterBindings);
 
         if (list.size() < pagination.getSize() && pagination.getPage() == 1
                 && pagination.getTotal() < list.size()) {
             pagination.setTotal(list.size());
         }
-        return (T) list;
+        return list;
     }
 
 
     @Override
-    public <T> T findOneByNativeSql(Class<?> cls, String queryString, Object... params) {
+    public <T> T findOneByNativeSql(Class<? extends T> cls, String queryString, Object... params) {
         try {
-            QueryRunner runner = new QueryRunner();
-            ResultSetHandler<List<Object>> handler = getListResultSetHandler(ModelMeta.getModelMeta(cls));
-            List<Object> result = runner.query(getJdbcConnection(), queryString, handler, params);
-            if (result.size() > 0) {
-                return (T) result.get(0);
-            } else {
-                return null;
-            }
+            ResultSet resultSet = query(queryString, params);
+            return beanProcessor.toBean(resultSet, cls);
         } catch (SQLException e) {
             throw new JdbcRuntimeException(e);
         } finally {
@@ -694,19 +632,17 @@ public class JdbcSession extends AbstractSession {
     }
 
     @Override
-    public <T> T findOneByNativeSql(Class<?> cls, String queryString,
+    public <T> T findOneByNativeSql(Class<? extends T> cls, String queryString,
                                     ParameterBindings parameterBindings) {
         return findOneByNativeSql(cls, queryString,
-                parameterBindings.getIndexParametersArray() != null ? parameterBindings
-                        .getIndexParametersArray() : new Object[0]);
+                parameterBindings.getIndexParametersArray() != null ? parameterBindings.getIndexParametersArray() : new Object[0]);
     }
 
     @Override
-    public <T> T findListByNativeSql(Class<?> cls, String queryString,
-                                     ParameterBindings parameterBindings) {
+    public <T> List<T> findListByNativeSql(Class<? extends T> cls, String queryString,
+                                           ParameterBindings parameterBindings) {
         return findListByNativeSql(cls, queryString,
-                parameterBindings.getIndexParametersArray() != null ? parameterBindings
-                        .getIndexParametersArray() : new Object[0]);
+                parameterBindings.getIndexParametersArray() != null ? parameterBindings.getIndexParametersArray() : new Object[0]);
     }
 
 
@@ -778,17 +714,38 @@ public class JdbcSession extends AbstractSession {
         return this.isInCacheBatch;
     }
 
+
     @Override
-    public void execute(String sql) {
+    public boolean execute(String sql) {
         PreparedStatement preparedStatement = null;
         try {
             preparedStatement = getJdbcConnection().prepareStatement(sql);
-            preparedStatement.execute();
+            return preparedStatement.execute();
         } catch (SQLException e) {
             throw new JdbcRuntimeException(e);
-        }finally {
+        } finally {
             close(preparedStatement);
         }
+    }
 
+    private ResultSet query(String queryString, Object... params) throws SQLException {
+        PreparedStatement statement = getJdbcConnection().prepareStatement(queryString);
+        fillStatement(statement, params);
+        return statement.executeQuery();
+    }
+
+    private void setGeneratedId(FieldAccessor idAccessor, Object entity, Object id) {
+        Class<?> type = idAccessor.getPropertyType();
+        if( id instanceof Number){
+            if (type == Long.TYPE || type == Long.class) {
+                idAccessor.setProperty(entity, ((Number) id).longValue());
+            } else if (type == Integer.TYPE || type == Integer.class) {
+                idAccessor.setProperty(entity, ((Number) id).intValue());
+            } else {
+                idAccessor.setProperty(entity,id);
+            }
+        }else {
+            idAccessor.setProperty(entity,id);
+        }
     }
 }

@@ -3,7 +3,6 @@ package org.exemodel.orm;
 import org.exemodel.annotation.CacheField;
 import org.exemodel.annotation.Cacheable;
 import org.exemodel.annotation.PartitionId;
-import org.exemodel.exceptions.JdbcRuntimeException;
 import org.exemodel.util.BinaryUtil;
 import org.exemodel.util.StringUtil;
 
@@ -29,7 +28,8 @@ public class ModelMeta {
     private List<ModelColumnMeta> columnMetaList;
     private ModelColumnMeta idColumnMeta;
     private ModelColumnMeta partitionColumn;
-    private List<String> cacheColumnList;//{index:fieldName}
+    private volatile List<String> cacheColumnList;//{index:fieldName}
+    private volatile Map<String, FieldAccessor> accessorMap;
 
     /**
      * column info of orm model class, ignore all fieldNameBytes with @javax.sql.Transient
@@ -222,10 +222,10 @@ public class ModelMeta {
         if (modelMeta == null) {
             synchronized (ModelMeta.class) {
                 if (modelMetaCache.get(modelCls) == null) {
-                    modelMetaCache.put(modelCls, new ModelMeta(modelCls));
+                    modelMeta = new ModelMeta(modelCls);
+                    modelMetaCache.put(modelCls, modelMeta);
                 }
             }
-            modelMeta = modelMetaCache.get(modelCls);
         }
         return modelMeta;
     }
@@ -284,15 +284,6 @@ public class ModelMeta {
     }
 
 
-    public Map<String, String> getColumnToPropertyOverrides() {
-        Map<String, String> overrides = new HashMap<String, String>();
-        for (ModelColumnMeta modelColumnMeta : getColumnMetaSet()) {
-            overrides.put(modelColumnMeta.columnName.toLowerCase(), modelColumnMeta.fieldName);
-        }
-        return overrides;
-    }
-
-
     public FieldAccessor getIdAccessor() {
         if (idColumnMeta == null) {
             return null;
@@ -318,21 +309,24 @@ public class ModelMeta {
 
     public List<String> getCacheColumnList() {
         if (cacheColumnList == null) {
-            cacheColumnList = new ArrayList<>();
-            for (ModelColumnMeta columnMeta : this.columnMetaList) {
-                if (!columnMeta.isId) {
-                    CacheField cacheField = columnMeta.fieldAccessor.getPropertyAnnotation(CacheField.class);
-                    if (cacheField != null) {
-                        cacheColumnList.add(columnMeta.columnName);
+            synchronized (this) {
+                if (cacheColumnList == null) {
+                    cacheColumnList = new ArrayList<>();
+                    for (ModelColumnMeta columnMeta : this.columnMetaList) {
+                        if (!columnMeta.isId) {
+                            CacheField cacheField = columnMeta.fieldAccessor.getPropertyAnnotation(CacheField.class);
+                            if (cacheField != null) {
+                                cacheColumnList.add(columnMeta.columnName);
+                            }
+                        }
                     }
-
-                }
-            }
-            Collections.sort(cacheColumnList);
-            for (ModelColumnMeta columnMeta : this.columnMetaList) {
-                int index = cacheColumnList.indexOf(columnMeta.columnName);
-                if (index >= 0) {
-                    columnMeta.cacheOrder = BinaryUtil.toBytes(index);
+                    Collections.sort(cacheColumnList);
+                    for (ModelColumnMeta columnMeta : this.columnMetaList) {
+                        int index = cacheColumnList.indexOf(columnMeta.columnName);
+                        if (index >= 0) {
+                            columnMeta.cacheOrder = BinaryUtil.toBytes(index);
+                        }
+                    }
                 }
             }
         }
@@ -380,4 +374,18 @@ public class ModelMeta {
         return res;
     }
 
+    public Map<String, FieldAccessor> getAccessorMap() {
+        if (accessorMap == null) {
+            synchronized (this) {
+                if (accessorMap == null) {
+                    accessorMap = new HashMap<>();
+                    for (ModelColumnMeta columnMeta : columnMetaList) {
+                        accessorMap.put(columnMeta.columnName, columnMeta.fieldAccessor);
+                    }
+                }
+
+            }
+        }
+        return accessorMap;
+    }
 }

@@ -7,6 +7,8 @@ import org.exemodel.util.StringUtil;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -19,6 +21,18 @@ public class FieldAccessor {
     private Method getMethod;
     private Method setMethod;
     private final String name;
+    private static final Map<Class<?>, Object> primitiveDefaults = new HashMap<Class<?>, Object>();
+
+    static {
+        primitiveDefaults.put(Integer.TYPE, Integer.valueOf(0));
+        primitiveDefaults.put(Short.TYPE, Short.valueOf((short) 0));
+        primitiveDefaults.put(Byte.TYPE, Byte.valueOf((byte) 0));
+        primitiveDefaults.put(Float.TYPE, Float.valueOf(0f));
+        primitiveDefaults.put(Double.TYPE, Double.valueOf(0d));
+        primitiveDefaults.put(Long.TYPE, Long.valueOf(0L));
+        primitiveDefaults.put(Boolean.TYPE, Boolean.FALSE);
+        primitiveDefaults.put(Character.TYPE, Character.valueOf((char) 0));
+    }
 
     private static final Map<String, FieldAccessor> fieldAccessorCache = new ConcurrentHashMap<>(totalFieldsNum);
 
@@ -71,6 +85,8 @@ public class FieldAccessor {
         }
     }
 
+
+
     /**
      * get cn.superid.constantapi.annotation of this property, first find on field, then find on get-field-method, then on set-field-method
      *
@@ -116,27 +132,38 @@ public class FieldAccessor {
     }
 
     public void setProperty(Object obj, Object value) {
-        if ((getPropertyType() == int.class || getPropertyType() == Integer.class) && value instanceof Long) {
-            value = ((Long) value).intValue();
+        Class<?> type = getPropertyType();
+        if (value == null && type.isPrimitive()) {
+            value = primitiveDefaults.get(type);
         }
 
-        if (setMethod != null) {
-            try {
-                setMethod.invoke(obj, value);
-                return;
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+        if (this.isCompatibleType(value, type)) {
+            if (setMethod != null) {
+                try {
+                    setMethod.invoke(obj, value);
+                    return;
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
             }
-        }
-        if (field != null) {
-            try {
-                field.set(obj, value);
-                return;
-            } catch (IllegalAccessException e) {
-                throw new RuntimeException(e);
+            if (field != null) {
+                try {
+                    field.set(obj, value);
+                    return;
+                } catch (IllegalAccessException e) {
+                    throw new RuntimeException(e);
+                }
             }
+            throw new RuntimeException(String.format("Can't find accessor of set property %s", name));
+        }else {
+            throw new RuntimeException(String.format("Can't set type %s %s to field  %s type %s",value.getClass(),value,name,type));
         }
-        throw new RuntimeException(String.format("Can't find accessor of set property %s", name));
+    }
+
+    public void setScalarProperty(Object obj, Object value){
+        if(!(value instanceof Number)){
+            throw new RuntimeException(String.format("Can't find accessor of set property %s", name));
+        }
     }
 
     private String upperFirstChar(String str) {
@@ -188,5 +215,44 @@ public class FieldAccessor {
             }
         }
         return "set" + upperFirstChar(methodName);
+    }
+
+    private boolean isCompatibleType(Object value, Class<?> type) {
+        // Do object check first, then primitives
+        if (value == null || type.isInstance(value) || matchesPrimitive(type, value.getClass())) {
+            return true;
+
+        }
+        return false;
+    }
+
+    /**
+     * Check whether a value is of the same primitive type as <code>targetType</code>.
+     *
+     * @param targetType The primitive type to target.
+     * @param valueType  The value to match to the primitive type.
+     * @return Whether <code>valueType</code> can be coerced (e.g. autoboxed) into <code>targetType</code>.
+     */
+    private boolean matchesPrimitive(Class<?> targetType, Class<?> valueType) {
+        if (!targetType.isPrimitive()) {
+            return false;
+        }
+
+        try {
+            // see if there is a "TYPE" field.  This is present for primitive wrappers.
+            Field typeField = valueType.getField("TYPE");
+            Object primitiveValueType = typeField.get(valueType);
+
+            if (targetType == primitiveValueType) {
+                return true;
+            }
+        } catch (NoSuchFieldException e) {
+            // lacking the TYPE field is a good sign that we're not working with a primitive wrapper.
+            // we can't match for compatibility
+        } catch (IllegalAccessException e) {
+            // an inaccessible TYPE field is a good sign that we're not working with a primitive wrapper.
+            // nothing to do.  we can't match for compatibility
+        }
+        return false;
     }
 }

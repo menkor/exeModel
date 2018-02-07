@@ -20,12 +20,12 @@ public class InitResource  {
 
         dataSource = new DruidDataSource();
         dataSource.setDriverClassName("com.mysql.jdbc.Driver");
-//        dataSource.setUsername("superid");
-//        dataSource.setPassword("superid");
-//        dataSource.setUrl("jdbc:mysql://rm-bp1943x791y4e3z21.mysql.rds.aliyuncs.com/jpa");
-        dataSource.setUsername("root");
-        dataSource.setPassword("Superid123");
-        dataSource.setUrl("jdbc:mysql://192.168.1.204:4000/fund");
+        dataSource.setUsername("superid");
+        dataSource.setPassword("superid");
+        dataSource.setUrl("jdbc:mysql://rm-bp1943x791y4e3z21.mysql.rds.aliyuncs.com/jpa");
+//        dataSource.setUsername("root");
+//        dataSource.setPassword("Superid123");
+//        dataSource.setUrl("jdbc:mysql://192.168.1.204:4000/fund");
         dataSource.setInitialSize(5);
         dataSource.setMinIdle(1);
         dataSource.setMaxActive(1000);

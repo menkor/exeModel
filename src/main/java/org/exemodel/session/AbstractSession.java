@@ -6,8 +6,8 @@ import org.exemodel.orm.FieldAccessor;
 import org.exemodel.orm.ModelMeta;
 import org.exemodel.util.BinaryUtil;
 import org.exemodel.util.MapTo;
-import org.exemodel.util.PrimitivesWrapper;
 
+import java.sql.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -108,25 +108,6 @@ public abstract class AbstractSession implements Session {
         return cache;
     }
 
-    private static final Map<Class<?>, Class<?>> PRIMITIVES_TO_WRAPPERS = PrimitivesWrapper.get();
-
-    private boolean canSetProperties(ModelMeta.ModelColumnMeta fromColumnMeta,ModelMeta.ModelColumnMeta toColumnMeta){
-        if(!toColumnMeta.fieldName.equals(fromColumnMeta.fieldName)){
-            return false;
-        }
-        Class<?> from = fromColumnMeta.fieldType;
-        Class<?> to = toColumnMeta.fieldType;
-        if(from.equals(to)){
-            return true;
-        }
-        if(from.isPrimitive()){
-           return  PRIMITIVES_TO_WRAPPERS.get(from).equals(to);
-        }
-        if(to.isPrimitive()){
-            return PRIMITIVES_TO_WRAPPERS.get(to).equals(from);
-        }
-        return false;
-    }
 
     @Override
     public void copyProperties(Object from, Object to, boolean skipNull,boolean skipId) {
@@ -140,7 +121,7 @@ public abstract class AbstractSession implements Session {
                 if (fromColumnMeta.isId && skipId) {
                     continue;
                 }
-                if (canSetProperties(fromColumnMeta,toColumnMeta)) {
+                if (toColumnMeta.fieldName.equals(fromColumnMeta.fieldName)){
                     FieldAccessor fromFa = fromColumnMeta.fieldAccessor;
                     Object value = fromFa.getProperty(from);
                     if (skipNull && value == null) {
@@ -220,6 +201,77 @@ public abstract class AbstractSession implements Session {
     public void batchDeleteCache(List<ExecutableModel> models) {
         getCache().batchDelete(models);
     }
+
+
+    private volatile boolean pmdKnownBroken = false;
+
+    /**
+     * Fill the <code>PreparedStatement</code> replacement parameters with the
+     * given objects.
+     *
+     * @param stmt
+     *            PreparedStatement to fill
+     * @param params
+     *            Query replacement parameters; <code>null</code> is a valid
+     *            value to pass in.
+     * @throws SQLException
+     *             if a database access error occurs
+     */
+    protected void fillStatement(PreparedStatement stmt, Object... params)
+            throws SQLException {
+
+        // check the parameter count, if we can
+        ParameterMetaData pmd = null;
+        if (!pmdKnownBroken) {
+            try {
+                pmd = stmt.getParameterMetaData();
+                if (pmd == null) { // can be returned by implementations that don't support the method
+                    pmdKnownBroken = true;
+                } else {
+                    int stmtCount = pmd.getParameterCount();
+                    int paramsCount = params == null ? 0 : params.length;
+
+                    if (stmtCount != paramsCount) {
+                        throw new SQLException("Wrong number of parameters: expected "
+                                + stmtCount + ", was given " + paramsCount);
+                    }
+                }
+            } catch (SQLFeatureNotSupportedException ex) {
+                pmdKnownBroken = true;
+            }
+        }
+
+        // nothing to do here
+        if (params == null) {
+            return;
+        }
+
+        for (int i = 0; i < params.length; i++) {
+            if (params[i] != null) {
+                stmt.setObject(i + 1, params[i]);
+            } else {
+                // VARCHAR works with many drivers regardless
+                // of the actual column type. Oddly, NULL and
+                // OTHER don't work with Oracle's drivers.
+                int sqlType = Types.VARCHAR;
+                if (!pmdKnownBroken) {
+                    try {
+                        /*
+                         * It's not possible for pmdKnownBroken to change from
+                         * true to false, (once true, always true) so pmd cannot
+                         * be null here.
+                         */
+                        sqlType = pmd.getParameterType(i + 1);
+                    } catch (SQLException e) {
+                        pmdKnownBroken = true;
+                    }
+                }
+                stmt.setNull(i + 1, sqlType);
+            }
+        }
+    }
+
+
 
 
 }

@@ -1,11 +1,10 @@
-import model.User;
 import org.exemodel.session.AbstractSession;
 import org.exemodel.session.Session;
 import org.exemodel.util.Function;
 import model.Role;
+import org.exemodel.util.MapTo;
 import org.junit.Assert;
 import org.junit.Test;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -39,12 +38,9 @@ public class RoleDaoTest {
         Role role2 = CustomStatement.build(Role.class).id(role.getId()).selectOne("userId");
         Assert.assertTrue(role.getUserId() == role2.getUserId());
 
-        session.getCache().delete(role.generateKey());
-        Role role3 = CustomStatement.build(Role.class).findCache(role.getId(), role.getUserId());
-        Assert.assertTrue(role3 == null);
 
-        Role role4 = CustomStatement.build(Role.class).findCache(role.getId());
-        Assert.assertTrue(role4.getDetails() == null);//because details not cache
+        Role role3 = CustomStatement.build(Role.class).findCache(role.getId());
+        Assert.assertTrue(role3.getDetails() == null);//because details not cache
 
     }
 
@@ -92,55 +88,55 @@ public class RoleDaoTest {
         try (Session session = AbstractSession.currentSession()) {//try with material
             List<Role> roleList = getList(session);
 
-//            String tmp = "dog_fxxx";
-//            for (Role role : roleList) {
-//                role.setPermissions(tmp);
-//            }
-//            session.updateBatch(roleList);
-//
-//            Map<Integer, Role> test = session.getCache().batchGet(roleList, new MapTo<Integer, Role>() {
-//                @Override
-//                public Integer apply(Role role) {
-//                    return role.getId();
-//                }
-//            }, Role.class);
-//
-//            Integer[] ids = new Integer[10];
-//            int i = 0;
-//            for (Role role : roleList) {
-//                ids[i++] = role.getId();
-//            }
-//
-//            Map<Integer, Role> map = session.getCache().batchGet(ids, Role.class);
-//
-//            List<Role> res = new ArrayList<>();
-//
-//            session.startCacheBatch();
-//            for (Object id : ids) {
-//                Role role = CustomStatement.build(Role.class).id(id).selectOne("permissions");
-//                res.add(role);
-//                Role role1 = CustomStatement.build(Role.class).findCache(id);
-//                res.add(role1);
-//            }
-//            session.executeCacheBatch();
-//            for (Role role : res) {
-//                Assert.assertTrue(role != null);
-//            }
-//
-//            Role role0 = roleList.get(0);
-//            session.startCacheBatch();
-//            CustomStatement.build(Role.class).id(role0.getId()).set("permissions", "fuck_the_wildest_dog");
-//            CustomStatement.build(Role.class).id(role0.getId()).set("userId", 20);
-//            role0 = CustomStatement.build(Role.class).findCache(role0.getId());
-//            session.executeCacheBatch();
-//            Assert.assertTrue(role0.getUserId() == 20);
-//
-//            roleList.get(0).setUserId(20);
-//            session.deleteBatch(roleList);
-//            Role role = CustomStatement.build(Role.class).findById(ids[0]);
-//            Assert.assertTrue(role == null);
-//            Role role1 = CustomStatement.build(Role.class).findCache(ids[1], 10);
-//            Assert.assertTrue(role1 == null);
+            String tmp = "dog_fxxx";
+            for (Role role : roleList) {
+                role.setPermissions(tmp);
+            }
+            session.updateBatch(roleList);
+
+            Map<Integer, Role> test = session.getCache().batchGet(roleList, new MapTo<Integer, Role>() {
+                @Override
+                public Integer apply(Role role) {
+                    return role.getId();
+                }
+            }, Role.class);
+
+            Integer[] ids = new Integer[10];
+            int i = 0;
+            for (Role role : roleList) {
+                ids[i++] = role.getId();
+            }
+
+            Map<Integer, Role> map = session.getCache().batchGet(ids, Role.class);
+
+            List<Role> res = new ArrayList<>();
+
+            session.startCacheBatch();
+            for (Object id : ids) {
+                Role role = CustomStatement.build(Role.class).id(id).selectOne("permissions");
+                res.add(role);
+                Role role1 = CustomStatement.build(Role.class).findCache(id);
+                res.add(role1);
+            }
+            session.executeCacheBatch();
+            for (Role role : res) {
+                Assert.assertTrue(role != null);
+            }
+
+            Role role0 = roleList.get(0);
+            session.startCacheBatch();
+            CustomStatement.build(Role.class).id(role0.getId()).set("permissions", "fuck_the_wildest_dog");
+            CustomStatement.build(Role.class).id(role0.getId()).set("userId", 20);
+            role0 = CustomStatement.build(Role.class).findCache(role0.getId());
+            session.executeCacheBatch();
+            Assert.assertTrue(role0.getUserId() == 20);
+
+            roleList.get(0).setUserId(20);
+            session.deleteBatch(roleList);
+            Role role = CustomStatement.build(Role.class).findById(ids[0]);
+            Assert.assertTrue(role == null);
+            Role role1 = CustomStatement.build(Role.class).findCache(ids[1], 10);
+            Assert.assertTrue(role1 == null);
         }
     }
 
@@ -186,29 +182,5 @@ public class RoleDaoTest {
 
     }
 
-
-    @Test
-    public void testInsert(){
-        Timer timer = new Timer();
-        for(int i=1;i<1000;i++){
-         User user = CustomStatement.build(User.class).id(i).selectOne();
-//            User user = new User();
-//            user.setName("zp");
-//            user.setAge(18);
-//            user.save();
-        }
-        timer.end();
-    }
-
-    @Test
-    public void testSelect(){
-        Timer timer = new Timer();
-        for(int i=1;i<1000;i++){
-            User.getSession().findOneByNativeSql(User.class,
-                    "select * from role r join user u on r.user_id = u.id where u.name= ? limit 1",
-                     "zp");
-        }
-        timer.end();
-    }
 
 }

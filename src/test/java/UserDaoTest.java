@@ -11,6 +11,9 @@ import model.User;
 import org.junit.Assert;
 import org.testng.annotations.Test;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -22,9 +25,6 @@ import java.util.List;
 public class UserDaoTest{
     static {
         new InitResource();
-    }
-    public void testFindById() {
-//        User user = User.findById()
     }
 
     @Test
@@ -60,9 +60,18 @@ public class UserDaoTest{
 
 
     @Test
-    public void testFindList() {
-        List<User> list = CustomStatement.build(User.class).findListByNativeSql("select * from user where name=?", "zp");
-        Assert.assertTrue(list != null);
+    public void testFindList() throws Exception{
+        Connection connection =  InitResource.dataSource.getConnection();
+        PreparedStatement preparedStatement = connection.prepareStatement("select * from user where name='zp'  GROUP  BY age ");
+        ResultSet resultSet = preparedStatement.executeQuery();
+        while (resultSet.next()){
+            String name = resultSet.getString("name");
+            int age = resultSet.getInt("age");
+            System.out.println( name + ": "+age);
+        }
+//
+//        List<User> list = CustomStatement.build(User.class).findListByNativeSql("select * from user where name=?", "zp");
+//        Assert.assertTrue(list != null);
     }
 
     @Test
@@ -75,7 +84,7 @@ public class UserDaoTest{
     @Test
     public void testSelectOne() {
         testSave();
-        User user = CustomStatement.build(User.class).eq("name", "xxf").selectOne("id", "name");
+        User user = CustomStatement.build(User.class).eq("name", "zp").selectOne("id", "name");
         Assert.assertTrue(user != null);
     }
 
@@ -84,7 +93,7 @@ public class UserDaoTest{
     public void testSelectList() {
         List<User> users = CustomStatement.build(User.class).eq("name", "zp").asc("age").selectList("id","name");
         Assert.assertTrue(users != null);
-        List<Long> ids =(List<Long>) CustomStatement.build(User.class).eq("name", "zp").asc("age").selectList(Long.class,"id");
+        List<Long> ids = CustomStatement.build(User.class).eq("name", "zp").asc("age").selectList(Long.class,"id");
         Assert.assertTrue(ids != null);
 
     }

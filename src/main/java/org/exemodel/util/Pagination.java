@@ -6,7 +6,7 @@ package org.exemodel.util;
 public class Pagination {
     private int page = 1;
     private int size = 10;
-    private int total = -1;
+    private long total = -1;
     private boolean needTotal = true;
 
 
@@ -40,13 +40,15 @@ public class Pagination {
         this.size = size;
     }
 
-    public int getTotal() {
+    public long getTotal() {
         return total;
     }
 
-    public void setTotal(int total) {
+    public void setTotal(long total) {
         this.total = total;
     }
+
+
 
     public int getOffset() {
         return (page - 1) * size;
@@ -59,4 +61,6 @@ public class Pagination {
     public void setNeedTotal(boolean needTotal) {
         this.needTotal = needTotal;
     }
+
+
 }
