@@ -1,4 +1,4 @@
-package model;
+package org.exemodel.model;
 
 import org.exemodel.annotation.CacheField;
 import org.exemodel.annotation.Cacheable;
@@ -63,5 +63,16 @@ public class Role extends ExecutableModel{
 
     public void setPermissions(String permissions) {
         this.permissions = permissions;
+    }
+
+    @Override
+    public String toString() {
+        return "Role{" +
+                "id=" + id +
+                ", userId=" + userId +
+                ", title='" + title + '\'' +
+                ", details='" + details + '\'' +
+                ", permissions='" + permissions + '\'' +
+                '}';
     }
 }

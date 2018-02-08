@@ -145,7 +145,7 @@ public abstract class Statement<T> extends SqlBuilder<T> {
           return (E) cached;
         }
         ExecutableModel fromDb = (ExecutableModel)getSession().findOneByNativeSql(this.modelClass, sql,sqlParams);
-        if (fromDb != null) {//save the whole cached model
+        if (fromDb != null) {//save the whole cached org.exemodel.entity
           FieldAccessor fieldAccessor = modelMeta.getIdAccessor();
           fieldAccessor.setProperty(fromDb, key);
           getCache().save(fromDb);
@@ -280,7 +280,7 @@ public abstract class Statement<T> extends SqlBuilder<T> {
 
   public int set(String setSql, ParameterBindings setParams) {
     if (isCacheable()) {
-      throw new JdbcRuntimeException("WARN: You update a cacheable model and the cache field not update");
+      throw new JdbcRuntimeException("WARN: You update a cacheable org.exemodel.entity and the cache field not update");
     }
     String sql = " UPDATE " + getModelMeta().getTableName() + " SET " + setSql + where;
     ParameterBindings all;
@@ -297,7 +297,7 @@ public abstract class Statement<T> extends SqlBuilder<T> {
   public int remove() {
     if (isCacheable()) {
       if (key == null) {
-        throw new JdbcRuntimeException("Can't remove a cacheable model without id");
+        throw new JdbcRuntimeException("Can't remove a cacheable org.exemodel.entity without id");
       }
       getCache().delete(BinaryUtil.generateKey(getModelMeta().getKey(), BinaryUtil.getBytes(key)));
     }

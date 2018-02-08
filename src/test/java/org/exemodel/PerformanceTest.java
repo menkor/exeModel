@@ -1,11 +1,13 @@
+package org.exemodel;
+
+import org.exemodel.component.*;
+import org.exemodel.model.Role;
 import org.exemodel.session.AbstractSession;
 import org.exemodel.session.Session;
 import org.exemodel.util.ParameterBindings;
-import model.Role;
-import model.User;
+import org.exemodel.model.User;
 import org.junit.Test;
 import org.springframework.beans.BeanUtils;
-
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;

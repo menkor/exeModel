@@ -1,3 +1,5 @@
+package org.exemodel.component;
+
 /**
  * Created by zp on 17/2/17.
  */

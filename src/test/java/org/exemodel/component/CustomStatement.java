@@ -1,3 +1,5 @@
+package org.exemodel.component;
+
 import org.exemodel.orm.Statement;
 
 /**

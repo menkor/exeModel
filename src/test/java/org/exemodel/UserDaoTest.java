@@ -1,4 +1,8 @@
-import com.alibaba.druid.support.json.JSONUtils;
+package org.exemodel;
+
+import org.exemodel.component.CustomStatement;
+import org.exemodel.component.InitResource;
+import org.exemodel.component.UserAddForm;
 import org.exemodel.session.AbstractSession;
 import org.exemodel.session.Session;
 import org.exemodel.exceptions.JdbcRuntimeException;
@@ -6,14 +10,16 @@ import org.exemodel.orm.ExecutableModel;
 import org.exemodel.util.Expr;
 import org.exemodel.util.Pagination;
 import org.exemodel.util.ParameterBindings;
-import model.Role;
-import model.User;
+import org.exemodel.model.Role;
+import org.exemodel.model.User;
 import org.junit.Assert;
 import org.testng.annotations.Test;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.nio.charset.StandardCharsets;
+import java.sql.Blob;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -22,19 +28,9 @@ import java.util.List;
 /**
  * Created by zp on 2016/7/20.
  */
-public class UserDaoTest{
+public class UserDaoTest {
     static {
         new InitResource();
-    }
-
-    @Test
-    public User testSave() {
-        User user = new User();
-        user.setName("zp");
-        user.setAge(18);
-        user.save();
-        Assert.assertTrue(CustomStatement.build(User.class).findById(user.getId()) != null);
-        return user;
     }
 
 
@@ -43,7 +39,7 @@ public class UserDaoTest{
         User user = testSave();
         user.setAge(25);
         user.update();
-        User _user = CustomStatement.build(User.class).findById(user.getId());
+        User _user = getStatement().findById(user.getId());
         Assert.assertTrue(_user.getAge() == 25);
     }
 
@@ -55,56 +51,55 @@ public class UserDaoTest{
         user.setAge(18);
         user.save();
         user.delete();
-        Assert.assertTrue(CustomStatement.build(User.class).findById(user.getId()) == null);
+        User _user = getStatement().findById(user.getId());
+        Assert.assertTrue(_user == null);
     }
 
 
     @Test
-    public void testFindList() throws Exception{
-        Connection connection =  InitResource.dataSource.getConnection();
-        PreparedStatement preparedStatement = connection.prepareStatement("select * from user where name='zp'  GROUP  BY age ");
-        ResultSet resultSet = preparedStatement.executeQuery();
-        while (resultSet.next()){
-            String name = resultSet.getString("name");
-            int age = resultSet.getInt("age");
-            System.out.println( name + ": "+age);
-        }
-//
-//        List<User> list = CustomStatement.build(User.class).findListByNativeSql("select * from user where name=?", "zp");
-//        Assert.assertTrue(list != null);
+    public void testFindList() {
+        String sql = "select * from user where name=?";
+        List<User> list = getStatement().findListByNativeSql(sql, "zp");
+        Assert.assertTrue(list != null);
     }
 
     @Test
     public void testFindOne() {
         testSave();
-        User user = CustomStatement.build(User.class).findOneByNativeSql("select id,name as idCard from user where name=? and age =? limit 1 ", "zp",18);
+        String sql = "select id,name as idCard from user where name=? and age =? limit 1 ";
+        User user = getStatement().findOneByNativeSql(sql, "zp", 18);
         Assert.assertTrue(user != null);
     }
 
     @Test
     public void testSelectOne() {
         testSave();
-        User user = CustomStatement.build(User.class).eq("name", "zp").selectOne("id", "name");
+        User user = getStatement().eq("name", "zp").selectOne("id", "name");
         Assert.assertTrue(user != null);
     }
 
 
     @Test
     public void testSelectList() {
-        List<User> users = CustomStatement.build(User.class).eq("name", "zp").asc("age").selectList("id","name");
+        List<User> users = getStatement().eq("name", "zp")
+                .asc("age")
+                .selectList("id", "name");
+
         Assert.assertTrue(users != null);
-        List<Long> ids = CustomStatement.build(User.class).eq("name", "zp").asc("age").selectList(Long.class,"id");
+        List<Long> ids = getStatement().eq("name", "zp")
+                .asc("age")
+                .selectList(Long.class, "id");
         Assert.assertTrue(ids != null);
 
     }
 
 
     @Test
-    public void testOrConditions(){
-        List<User> users1 = CustomStatement.build(User.class).or(Expr.eq("name","zp"),Expr.eq("name","xxf")).selectList();
-        String[] names ={"zp","xxf"};
-        List<User> users2 = CustomStatement.build(User.class).in("name",names).selectList();
-        Assert.assertTrue(users1.size()==users2.size());
+    public void testOrConditions() {
+        List<User> users1 = getStatement().or(Expr.eq("name", "zp"), Expr.eq("name", "xxf")).selectList();
+        String[] names = {"zp", "xxf"};
+        List<User> users2 = getStatement().in("name", names).selectList();
+        Assert.assertTrue(users1.size() == users2.size());
 
     }
 
@@ -114,8 +109,8 @@ public class UserDaoTest{
         user.setAge(33);
         user.setName("tms");
         user.save();
-        CustomStatement.build(User.class).eq("name", "tms").remove();
-        Assert.assertTrue(CustomStatement.build(User.class).findById(user.getId()) == null);
+        getStatement().eq("name", "tms").remove();
+        Assert.assertTrue(findById(user.getId()) == null);
 
 
     }
@@ -126,7 +121,8 @@ public class UserDaoTest{
         user.setName("src/test");
         user.setAge(18);
         user.save();
-        HashMap<String,Object> hashMap=User.getSession().generateHashMapFromEntity(user,false);
+
+        HashMap<String, Object> hashMap = User.getSession().generateHashMapFromEntity(user, false);
         Assert.assertTrue(hashMap.get("age").equals(18));
 
         User user1 = new User();
@@ -153,7 +149,7 @@ public class UserDaoTest{
     }
 
     @Test
-    public void testTransaction(){
+    public void testTransaction() {
         Session session = AbstractSession.currentSession();
         session.begin();
         CustomStatement.build(User.class).eq("name", "tms").set("name", "xxf", "age", 38);//把tms改成xxf，年龄改为38
@@ -166,9 +162,8 @@ public class UserDaoTest{
     @Test
     public void testExecute() {
         User.executeUpdate("update user set name=? where name='zp'", new ParameterBindings("jzy"));
-        Assert.assertTrue(CustomStatement.build(User.class).eq("name", "zp").selectOne() == null);
+        Assert.assertTrue(getStatement().eq("name", "zp").selectOne() == null);
     }
-
 
 
     @Test
@@ -191,15 +186,17 @@ public class UserDaoTest{
         Pagination pagination = new Pagination();
         pagination.setPage(1);
         pagination.setSize(20);
-        List<User> users = CustomStatement.build(User.class).eq("name", "xxf").asc("age").selectByPagination(pagination);
+        List<User> users = getStatement().eq("name", "xxf")
+                .asc("age")
+                .selectByPagination(pagination);
 
         Assert.assertFalse(users.size() > pagination.getTotal());
 
     }
 
     @Test
-    public void testUpdateWithPartition(){
-        User user=testSave();
+    public void testUpdateWithPartition() {
+        User user = testSave();
         Role role = new Role();
         role.setTitle("开发人员");
         try {
@@ -210,12 +207,12 @@ public class UserDaoTest{
 
         role.setUserId(user.getId());
         role.save();
-        Assert.assertTrue(role.getUserId()==user.getId());
+        Assert.assertTrue(role.getUserId() == user.getId());
     }
 
     @Test
-    public void testDeleteWithPartition(){
-        User user=testSave();
+    public void testDeleteWithPartition() {
+        User user = testSave();
         Role role = new Role();
         role.setTitle("开发人员");
         role.setUserId(user.getId());
@@ -240,34 +237,55 @@ public class UserDaoTest{
 
     }
 
-    @Test
-    public void testMutilThread() {
-        CustomStatement.build(User.class).isNotNull("id").remove();
-    }
-
 
     @Test
-    public void testExecuteBatch(){
+    public void testExecuteBatch() {
         List<ExecutableModel> users = new ArrayList<>();
-        for(int i=0;i<10;i++){
+        for (int i = 0; i < 10; i++) {
             User user = new User();
-            user.setName("zp"+i);
+            user.setName("zp" + i);
             users.add(user);
         }
-        try(Session session =User.getSession()) {
+        try (Session session = User.getSession()) {
             session.saveBatch(users);//批量保存userlist
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
-        Session session =User.getSession();
-        session.startBatch();
-        for(int i=0;i<10;i++){
-            User.executeUpdate("update user set name=? where name=?", new ParameterBindings("jzy"+i,"zp"+i));//批量修改
+
+        try (Session session = User.getSession()) {
+            session.startBatch();
+            for (int i = 0; i < 10; i++) {
+                User.executeUpdate("update user set name=? where name=?", new ParameterBindings("jzy" + i, "zp" + i));//批量修改
+            }
+
+            session.executeBatch();
         }
-        
-        session.executeBatch();
     }
 
+    @Test
+    public void testBlob(){
+        InputStream stream = new ByteArrayInputStream("ElonMusk".getBytes(StandardCharsets.UTF_8));
+        User user = new User();
+        user.setName("zp");
+        user.setAge(18);
+        user.setImage(stream);
+        user.save();
+    }
 
+    private User testSave() {
+        User user = new User();
+        user.setName("zp");
+        user.setAge(18);
+        user.save();
+        return user;
+    }
+
+    private CustomStatement getStatement() {
+        return CustomStatement.build(User.class);
+    }
+
+    private User findById(int userId) {
+        return getStatement().findById(userId);
+    }
 
 }

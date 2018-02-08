@@ -1,3 +1,4 @@
+package org.exemodel.component;
 
 import org.exemodel.session.impl.JdbcSessionFactory;
 import org.exemodel.cache.impl.RedisTemplate;
@@ -23,9 +24,6 @@ public class InitResource  {
         dataSource.setUsername("superid");
         dataSource.setPassword("superid");
         dataSource.setUrl("jdbc:mysql://rm-bp1943x791y4e3z21.mysql.rds.aliyuncs.com/jpa");
-//        dataSource.setUsername("root");
-//        dataSource.setPassword("Superid123");
-//        dataSource.setUrl("jdbc:mysql://192.168.1.204:4000/fund");
         dataSource.setInitialSize(5);
         dataSource.setMinIdle(1);
         dataSource.setMaxActive(1000);

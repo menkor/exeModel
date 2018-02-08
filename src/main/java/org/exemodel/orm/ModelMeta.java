@@ -32,7 +32,7 @@ public class ModelMeta {
     private volatile Map<String, FieldAccessor> accessorMap;
 
     /**
-     * column info of orm model class, ignore all fieldNameBytes with @javax.sql.Transient
+     * column info of orm org.exemodel.entity class, ignore all fieldNameBytes with @javax.sql.Transient
      */
     public static class ModelColumnMeta {
         public boolean isId = false;

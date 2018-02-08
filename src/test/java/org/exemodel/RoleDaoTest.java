@@ -1,7 +1,12 @@
+package org.exemodel;
+
+import org.exemodel.component.CustomStatement;
+import org.exemodel.component.InitResource;
+import org.exemodel.component.RoleUpdateForm;
 import org.exemodel.session.AbstractSession;
 import org.exemodel.session.Session;
 import org.exemodel.util.Function;
-import model.Role;
+import org.exemodel.model.Role;
 import org.exemodel.util.MapTo;
 import org.junit.Assert;
 import org.junit.Test;
@@ -17,27 +22,15 @@ public class RoleDaoTest {
         new InitResource();
     }
 
-    private Role addRole() {
-        Role role = new Role();
-        role.setTitle("Software Test");
-        role.setUserId(10);
-        role.setPermissions("admin");
-        role.setDetails("starking");
-        role.save();
-        return role;
-    }
-
 
     @Test
     public void testFindCache() {
         Role role = addRole();
-        Session session = AbstractSession.currentSession();
         Role role1 = CustomStatement.build(Role.class).findCache(role.getId());
         Assert.assertTrue(role.getUserId() == role1.getUserId());
 
         Role role2 = CustomStatement.build(Role.class).id(role.getId()).selectOne("userId");
         Assert.assertTrue(role.getUserId() == role2.getUserId());
-
 
         Role role3 = CustomStatement.build(Role.class).findCache(role.getId());
         Assert.assertTrue(role3.getDetails() == null);//because details not cache
@@ -64,24 +57,12 @@ public class RoleDaoTest {
         Role role1 = CustomStatement.build(Role.class).findCache(role.getId());
         Assert.assertTrue(role1.getTitle().equals(newTitle));
 
-        role1 = CustomStatement.build(Role.class).id(role.getId()).selectOne("title","permissions");
-
+        role1 = CustomStatement.build(Role.class).id(role.getId()).selectOne("title", "permissions");
         Assert.assertTrue(role1.getTitle().equals(newTitle));
 
     }
 
-    private List<Role> getList(Session session) {
-        List<Role> roleList = new ArrayList<>();
-        for (int i = 0; i < 10; i++) {
-            Role role = new Role();
-            role.setPermissions("fxxx dog");
-            role.setTitle("jyz_FxxxDog");
-            role.setUserId(10 + i);
-            roleList.add(role);
-        }
-        session.saveBatch(roleList);
-        return roleList;
-    }
+
 
     @Test
     public void testBatch() {
@@ -94,7 +75,7 @@ public class RoleDaoTest {
             }
             session.updateBatch(roleList);
 
-            Map<Integer, Role> test = session.getCache().batchGet(roleList, new MapTo<Integer, Role>() {
+            Map<Integer, Role> roleMap = session.getCache().batchGet(roleList, new MapTo<Integer, Role>() {
                 @Override
                 public Integer apply(Role role) {
                     return role.getId();
@@ -107,10 +88,12 @@ public class RoleDaoTest {
                 ids[i++] = role.getId();
             }
 
-            Map<Integer, Role> map = session.getCache().batchGet(ids, Role.class);
+            Map<Integer, Role> roleMap1 = session.getCache().batchGet(ids, Role.class);
+            for(i=0;i<10;i++){
+                Assert.assertTrue( roleMap.get(ids[i]).getTitle().equals(roleMap1.get(ids[i]).getTitle()));
+            }
 
             List<Role> res = new ArrayList<>();
-
             session.startCacheBatch();
             for (Object id : ids) {
                 Role role = CustomStatement.build(Role.class).id(id).selectOne("permissions");
@@ -182,5 +165,28 @@ public class RoleDaoTest {
 
     }
 
+
+    private Role addRole() {
+        Role role = new Role();
+        role.setTitle("Software Test");
+        role.setUserId(10);
+        role.setPermissions("admin");
+        role.setDetails("starking");
+        role.save();
+        return role;
+    }
+
+    private List<Role> getList(Session session) {
+        List<Role> roleList = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            Role role = new Role();
+            role.setPermissions("fxxx dog");
+            role.setTitle("jyz_FxxxDog");
+            role.setUserId(10 + i);
+            roleList.add(role);
+        }
+        session.saveBatch(roleList);
+        return roleList;
+    }
 
 }
