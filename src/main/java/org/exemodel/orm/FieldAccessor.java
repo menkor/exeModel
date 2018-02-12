@@ -11,6 +11,7 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * java bean property(field/get-method/set-method)'s wrapper of java bean
@@ -34,7 +35,7 @@ public class FieldAccessor {
         primitiveDefaults.put(Character.TYPE, Character.valueOf((char) 0));
     }
 
-    private static final Map<String, FieldAccessor> fieldAccessorCache = new ConcurrentHashMap<>(totalFieldsNum);
+    private static final ConcurrentMap<String, FieldAccessor> fieldAccessorCache = new ConcurrentHashMap<>(totalFieldsNum);
 
     public static FieldAccessor getFieldAccessor(Class<?> cls, String name) {
         StringBuilder stringBuilder = new StringBuilder(cls.getCanonicalName());
@@ -43,12 +44,8 @@ public class FieldAccessor {
         String key = stringBuilder.toString();
         FieldAccessor fieldAccessor = fieldAccessorCache.get(key);
         if (fieldAccessor == null) {
-            synchronized (fieldAccessorCache) {
-                if (!fieldAccessorCache.containsKey(key)) {
-                    fieldAccessor = new FieldAccessor(cls, name);
-                    fieldAccessorCache.put(key, fieldAccessor);
-                }
-            }
+            fieldAccessor = new FieldAccessor(cls,name);
+            fieldAccessorCache.putIfAbsent(key,fieldAccessor);
         }
         return fieldAccessor;
     }
@@ -246,12 +243,8 @@ public class FieldAccessor {
             if (targetType == primitiveValueType) {
                 return true;
             }
-        } catch (NoSuchFieldException e) {
-            // lacking the TYPE field is a good sign that we're not working with a primitive wrapper.
-            // we can't match for compatibility
-        } catch (IllegalAccessException e) {
-            // an inaccessible TYPE field is a good sign that we're not working with a primitive wrapper.
-            // nothing to do.  we can't match for compatibility
+        } catch (NoSuchFieldException|IllegalAccessException e) {
+            return false;
         }
         return false;
     }

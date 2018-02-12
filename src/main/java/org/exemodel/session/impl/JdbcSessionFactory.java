@@ -1,6 +1,7 @@
 package org.exemodel.session.impl;
 
 import org.exemodel.cache.ICache;
+import org.exemodel.exceptions.JdbcRuntimeException;
 import org.exemodel.session.SessionFactory;
 import org.exemodel.session.AbstractSession;
 import org.exemodel.session.Session;
@@ -29,9 +30,14 @@ public class JdbcSessionFactory extends SessionFactory {
         dataSource.getConnection().close();
     }
 
-    public Connection createJdbcConnection() throws SQLException{
-        return dataSource.getConnection();
+    public Connection createJdbcConnection() {
+        try {
+            return dataSource.getConnection();
+        } catch (SQLException e) {
+            throw new JdbcRuntimeException(e);
+        }
     }
+
 
     @Override
     public ICache getCache() {

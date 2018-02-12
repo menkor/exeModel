@@ -196,6 +196,8 @@ public interface Session extends AutoCloseable{
      */
     <T> List<T> findListByNativeSql(Class<? extends T> cls, String queryString, ParameterBindings parameterBindings);
 
+
+    <T> T callProcedure(Class<? extends T> pojoCls, String call, ParameterBindings parameterBindings);
     /**
      * update db
      * @param sql
@@ -239,4 +241,6 @@ public interface Session extends AutoCloseable{
     void batchDeleteCache(List<ExecutableModel> models);
 
     boolean execute(String sql);
+
+
 }

@@ -1,10 +1,9 @@
 package org.exemodel.session.impl;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.sql.*;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -33,7 +32,6 @@ public class JdbcSession extends AbstractSession {
     private transient boolean isInBatch = false;
     private transient boolean isInCacheBatch = false;
     private transient PreparedStatement batchStatement;
-    private static BeanProcessor beanProcessor = new BeanProcessor();
 
     public JdbcSession(Connection jdbcConnection) {
         this.jdbcConnection = jdbcConnection;
@@ -183,13 +181,12 @@ public class JdbcSession extends AbstractSession {
                         try {
                             if (generatedKeysResultSet.next()) {
                                 Object generatedId = generatedKeysResultSet.getLong(1);
-                                setGeneratedId(idAccessor,entity,generatedId);
+                                setGeneratedId(idAccessor, entity, generatedId);
                             }
                         } finally {
                             generatedKeysResultSet.close();
                         }
                     }
-                    // save to Search Engine
                 }
             } catch (SQLException e) {
                 throw new JdbcRuntimeException(e);
@@ -470,7 +467,7 @@ public class JdbcSession extends AbstractSession {
                         for (Object entity : entities) {
                             if (generatedKeysResultSet.next()) {
                                 Object value = generatedKeysResultSet.getObject(index);
-                                setGeneratedId(idAccessor,entity,value);
+                                setGeneratedId(idAccessor, entity, value);
                             }
                         }
                     }
@@ -561,15 +558,17 @@ public class JdbcSession extends AbstractSession {
 
     @Override
     public <T> List<T> findListByNativeSql(Class<? extends T> cls, String queryString, Object... params) {
+        PreparedStatement statement =null;
         try {
-            ResultSet resultSet = query(queryString, params);
+            statement = getJdbcConnection().prepareStatement(queryString);
+            fillStatement(statement,params);
+            ResultSet resultSet = statement.executeQuery();
             return beanProcessor.toBeanList(resultSet, cls);
         } catch (SQLException e) {
             throw new JdbcRuntimeException(e);
         } finally {
-            close(null);
+            close(statement);
         }
-
     }
 
     /**
@@ -621,13 +620,16 @@ public class JdbcSession extends AbstractSession {
 
     @Override
     public <T> T findOneByNativeSql(Class<? extends T> cls, String queryString, Object... params) {
+        PreparedStatement statement = null;
         try {
-            ResultSet resultSet = query(queryString, params);
+            statement = getJdbcConnection().prepareStatement(queryString);
+            fillStatement(statement, params);
+            ResultSet resultSet = statement.executeQuery();
             return beanProcessor.toBean(resultSet, cls);
         } catch (SQLException e) {
             throw new JdbcRuntimeException(e);
         } finally {
-            close(null);
+            close(statement);
         }
     }
 
@@ -645,6 +647,37 @@ public class JdbcSession extends AbstractSession {
                 parameterBindings.getIndexParametersArray() != null ? parameterBindings.getIndexParametersArray() : new Object[0]);
     }
 
+    @Override
+    public <T> T callProcedure(Class<? extends T> pojoCls, String callString, ParameterBindings parameterBindings) {
+        CallableStatement callableStatement = null;
+        try {
+            callableStatement = getConnection().prepareCall(callString);
+            fillStatement(callableStatement, parameterBindings.getIndexParametersArray());
+            T result = pojoCls.newInstance();
+            Field[] fields = pojoCls.getDeclaredFields();
+            int i = 0;
+            boolean hasRs = callableStatement.execute();
+            while (hasRs) {
+                ResultSet resultSet = callableStatement.getResultSet();
+                Field field = fields[i++];
+                field.setAccessible(true);
+                if (Collection.class.isAssignableFrom(field.getType())) {
+                    ParameterizedType type = (ParameterizedType) field.getGenericType();
+                    Class<?> genericType = (Class<?>) type.getActualTypeArguments()[0];
+                    field.set(result, beanProcessor.toBeanList(resultSet, genericType));
+                } else {
+                    field.set(result, beanProcessor.toBean(resultSet, field.getType()));
+                }
+                hasRs = callableStatement.getMoreResults();
+            }
+
+            return result;
+        } catch (SQLException | InstantiationException | IllegalAccessException e) {
+            throw new JdbcRuntimeException(e);
+        } finally {
+            close(callableStatement);
+        }
+    }
 
     @Override
     public int executeUpdate(String sql, ParameterBindings parameterBindings) {
@@ -728,24 +761,18 @@ public class JdbcSession extends AbstractSession {
         }
     }
 
-    private ResultSet query(String queryString, Object... params) throws SQLException {
-        PreparedStatement statement = getJdbcConnection().prepareStatement(queryString);
-        fillStatement(statement, params);
-        return statement.executeQuery();
-    }
-
     private void setGeneratedId(FieldAccessor idAccessor, Object entity, Object id) {
         Class<?> type = idAccessor.getPropertyType();
-        if( id instanceof Number){
+        if (id instanceof Number) {
             if (type == Long.TYPE || type == Long.class) {
                 idAccessor.setProperty(entity, ((Number) id).longValue());
             } else if (type == Integer.TYPE || type == Integer.class) {
                 idAccessor.setProperty(entity, ((Number) id).intValue());
             } else {
-                idAccessor.setProperty(entity,id);
+                idAccessor.setProperty(entity, id);
             }
-        }else {
-            idAccessor.setProperty(entity,id);
+        } else {
+            idAccessor.setProperty(entity, id);
         }
     }
 }

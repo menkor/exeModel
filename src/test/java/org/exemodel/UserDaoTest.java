@@ -1,12 +1,11 @@
 package org.exemodel;
 
-import org.exemodel.component.CustomStatement;
-import org.exemodel.component.InitResource;
-import org.exemodel.component.UserAddForm;
+import org.exemodel.component.*;
 import org.exemodel.session.AbstractSession;
 import org.exemodel.session.Session;
 import org.exemodel.exceptions.JdbcRuntimeException;
 import org.exemodel.orm.ExecutableModel;
+import org.exemodel.util.BinaryUtil;
 import org.exemodel.util.Expr;
 import org.exemodel.util.Pagination;
 import org.exemodel.util.ParameterBindings;
@@ -15,11 +14,10 @@ import org.exemodel.model.User;
 import org.junit.Assert;
 import org.testng.annotations.Test;
 
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.io.ObjectInputStream;
-import java.nio.charset.StandardCharsets;
-import java.sql.Blob;
+import java.io.*;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -66,9 +64,12 @@ public class UserDaoTest {
     @Test
     public void testFindOne() {
         testSave();
-        String sql = "select id,name as idCard from user where name=? and age =? limit 1 ";
+        String sql = "select id,name from user where name=? and age =? limit 1 ";
         User user = getStatement().findOneByNativeSql(sql, "zp", 18);
         Assert.assertTrue(user != null);
+
+        UserVO userVO = getStatement().eq("name","zp").selectOne(UserVO.class,"id"," name as username");
+        Assert.assertTrue(userVO!=null);
     }
 
     @Test
@@ -263,14 +264,51 @@ public class UserDaoTest {
     }
 
     @Test
-    public void testBlob(){
-        InputStream stream = new ByteArrayInputStream("ElonMusk".getBytes(StandardCharsets.UTF_8));
+    public void testUnusualType(){
+        String testStr = "ElonMusk";
+        BigDecimal money = new BigDecimal("666.66");
+        BigInteger no = new BigInteger("1212121212121212121");
+        byte[] bytes = BinaryUtil.getBytes(testStr);
         User user = new User();
         user.setName("zp");
         user.setAge(18);
-        user.setImage(stream);
+        user.setPwd(bytes);
+        user.setMoney(money);
+        user.setSerialNo(no);
         user.save();
+
+        User _user = findById(user.getId());
+        Assert.assertTrue(BinaryUtil.toString(_user.getPwd()).equals(testStr));
+        Assert.assertTrue(_user.getMoney().equals(money));
+        Assert.assertTrue(_user.getSerialNo().equals(no));
     }
+
+    @Test
+    public void testInputStream() throws Exception{
+        InputStream inputStream = UserDaoTest.class.getResourceAsStream("/test.sql");
+        User user = new User();
+        user.setName("zp");
+        user.setAge(18);
+        user.setImage(inputStream);
+        user.save();
+
+        User _user = findById(user.getId());
+        InputStream inputStream1 = _user.getImage();
+        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream1,"utf-8"));
+        String s;
+        while ( (s = bufferedReader.readLine())!=null){
+            System.out.println(s);
+        }
+    }
+
+    @Test
+    public void testMutilResultSetOfProcedure() throws SQLException{
+        TestVO testVO = AbstractSession.currentSession()
+                .callProcedure(TestVO.class," call test_mutil_result_set(?)",new ParameterBindings("zp"));
+        System.out.println();
+    }
+
+
 
     private User testSave() {
         User user = new User();

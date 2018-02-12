@@ -4,6 +4,7 @@ import org.exemodel.cache.ICache;
 import org.exemodel.orm.ExecutableModel;
 import org.exemodel.orm.FieldAccessor;
 import org.exemodel.orm.ModelMeta;
+import org.exemodel.session.impl.BeanProcessor;
 import org.exemodel.util.BinaryUtil;
 import org.exemodel.util.MapTo;
 
@@ -15,10 +16,16 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public abstract class AbstractSession implements Session {
     protected final Queue<Object> txStack = new ConcurrentLinkedQueue<Object>();
     private ICache cache;
+    public static BeanProcessor beanProcessor = new BeanProcessor();
+
 
     @Override
     public int getIndexParamBaseOrdinal() {
         return 1;
+    }
+
+    public static void setBeanProcessor(BeanProcessor beanProcessor) {
+        AbstractSession.beanProcessor = beanProcessor;
     }
 
     @Override
@@ -94,6 +101,10 @@ public abstract class AbstractSession implements Session {
      */
     public static Session currentSession() {
         return defaultSessionFactory.currentSession();
+    }
+
+    public static Connection getConnection(){
+        return defaultSessionFactory.createJdbcConnection();
     }
 
 

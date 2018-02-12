@@ -18,6 +18,7 @@ import java.util.List;
 /**
  * Created by zp on 17/2/16.
  */
+
 public class PerformanceTest {
     static {
         new InitResource();
@@ -27,53 +28,53 @@ public class PerformanceTest {
      using 1115ms, start at Thu Sep 08 16:55:35 CST 2016, end at Thu Sep 08 16:55:36 CST 2016
      using 1156ms, start at Thu Sep 08 16:55:36 CST 2016, end at Thu Sep 08 16:55:37 CST 2016
      */
-    @Test
-    public void testPerformanceExecute() {
-        User user = new User();
-        user.setAge(33);
-        user.setName("tms");
-        user.save();
-
-        Timer timer = new Timer();
-        for (int i = 0; i < 1000; i++) {
-            CustomStatement.build(User.class).eq("name", "tms").set("name", "xxf", "age", 38);//把tms改成xxf，年龄改为38
-        }
-        timer.end();
-
-        Timer timer1 = new Timer();
-        for (int i = 0; i < 1000; i++) {
-            User.executeUpdate("update user set name = ? ,age=? where name =?", new ParameterBindings("tms", 38, "xxf"));
-        }
-        timer1.end();
-        DataSource dataSource = InitResource.dataSource;
-        Connection connection = null;
-        PreparedStatement preparedStatement = null;
-        Timer timer2 = new Timer();
-        for (int i = 0; i < 1000; i++) {
-
-            try {
-                connection = dataSource.getConnection();
-                preparedStatement = connection.prepareStatement("update user set name = ? ,age=? where name =?");
-                preparedStatement.setObject(1, "xxf");
-                preparedStatement.setObject(2, 38);
-                preparedStatement.setObject(3, "tms");
-                preparedStatement.executeUpdate();
-                preparedStatement.close();
-
-            } catch (SQLException e) {
-                e.printStackTrace();
-            } finally {
-                try {
-                    if (connection != null)
-                        connection.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-
-        }
-        timer2.end();
-    }
+//    @Test
+//    public void testPerformanceExecute() {
+//        User user = new User();
+//        user.setAge(33);
+//        user.setName("tms");
+//        user.save();
+//
+//        Timer timer = new Timer();
+//        for (int i = 0; i < 1000; i++) {
+//            CustomStatement.build(User.class).eq("name", "tms").set("name", "xxf", "age", 38);//把tms改成xxf，年龄改为38
+//        }
+//        timer.end();
+//
+//        Timer timer1 = new Timer();
+//        for (int i = 0; i < 1000; i++) {
+//            User.executeUpdate("update user set name = ? ,age=? where name =?", new ParameterBindings("tms", 38, "xxf"));
+//        }
+//        timer1.end();
+//        DataSource dataSource = InitResource.dataSource;
+//        Connection connection = null;
+//        PreparedStatement preparedStatement = null;
+//        Timer timer2 = new Timer();
+//        for (int i = 0; i < 1000; i++) {
+//
+//            try {
+//                connection = dataSource.getConnection();
+//                preparedStatement = connection.prepareStatement("update user set name = ? ,age=? where name =?");
+//                preparedStatement.setObject(1, "xxf");
+//                preparedStatement.setObject(2, 38);
+//                preparedStatement.setObject(3, "tms");
+//                preparedStatement.executeUpdate();
+//                preparedStatement.close();
+//
+//            } catch (SQLException e) {
+//                e.printStackTrace();
+//            } finally {
+//                try {
+//                    if (connection != null)
+//                        connection.close();
+//                } catch (SQLException e) {
+//                    e.printStackTrace();
+//                }
+//            }
+//
+//        }
+//        timer2.end();
+//    }
 
     /**
      * using 385ms, start at Sun Sep 18 15:54:39 CST 2016, end at Sun Sep 18 15:54:39 CST 2016

@@ -314,7 +314,7 @@ public class RedisTemplate implements ICache {
                 idAccessor.setProperty(result, id);
             }
             return (T) result;
-        } catch (Exception e) {
+        } catch (IllegalAccessException|InstantiationException e) {
             logger.error(e.getMessage());
             throw new JedisRuntimeException(e.getMessage());
         }

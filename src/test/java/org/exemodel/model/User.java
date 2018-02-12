@@ -7,8 +7,10 @@ import javax.persistence.Id;
 import javax.persistence.Table;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.sql.Blob;
 import java.sql.Timestamp;
+import java.util.Arrays;
 
 /**
  * Created by zp on 2016/7/20.
@@ -24,6 +26,8 @@ public class User  extends ExecutableModel{
     private BigDecimal money;
     private InputStream image;
     private Timestamp createTime;
+    private BigInteger serialNo;
+    private byte[] pwd;
 
     @Id
     public int getId() {
@@ -91,6 +95,23 @@ public class User  extends ExecutableModel{
         this.image = image;
     }
 
+    public BigInteger getSerialNo() {
+        return serialNo;
+    }
+
+    public void setSerialNo(BigInteger serialNo) {
+        this.serialNo = serialNo;
+    }
+
+    public byte[] getPwd() {
+        return pwd;
+    }
+
+    public void setPwd(byte[] pwd) {
+        this.pwd = pwd;
+    }
+
+
     @Override
     public String toString() {
         return "User{" +
@@ -102,6 +123,8 @@ public class User  extends ExecutableModel{
                 ", money=" + money +
                 ", image=" + image +
                 ", createTime=" + createTime +
+                ", serialNo=" + serialNo +
+                ", pwd=" + Arrays.toString(pwd) +
                 '}';
     }
 }

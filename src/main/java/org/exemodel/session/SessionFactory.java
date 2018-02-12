@@ -2,6 +2,7 @@ package org.exemodel.session;
 
 import org.exemodel.cache.ICache;
 
+import java.sql.Connection;
 import java.sql.SQLException;
 
 /**
@@ -39,6 +40,8 @@ public abstract class SessionFactory {
     public abstract ICache getCache();
 
     public  abstract   Session createSession();
+
+    public  abstract Connection createJdbcConnection() ;
 
     public  abstract void close() throws SQLException;
 }
