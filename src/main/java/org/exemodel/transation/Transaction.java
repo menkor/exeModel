@@ -1,15 +1,21 @@
 package org.exemodel.transation;
 
+import java.sql.Connection;
+
 /**
  * Created by zp on 2016/7/18
  */
 public interface Transaction {
 
-    public void begin();
+    void begin();
 
-    public void commit();
+    void commit();
 
-    public void rollback();
+    void rollback();
+
+    void close();
+
+    Connection getConnection();
 
     public void setIsolationLevel(Integer isolationLevel);
 

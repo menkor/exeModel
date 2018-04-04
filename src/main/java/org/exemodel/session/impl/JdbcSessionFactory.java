@@ -5,6 +5,7 @@ import org.exemodel.exceptions.JdbcRuntimeException;
 import org.exemodel.session.SessionFactory;
 import org.exemodel.session.AbstractSession;
 import org.exemodel.session.Session;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -30,6 +31,7 @@ public class JdbcSessionFactory extends SessionFactory {
         dataSource.getConnection().close();
     }
 
+    @Override
     public Connection createJdbcConnection() {
         try {
             return dataSource.getConnection();

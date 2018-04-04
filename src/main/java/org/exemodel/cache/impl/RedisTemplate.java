@@ -1,7 +1,6 @@
 package org.exemodel.cache.impl;
 
 import org.apache.commons.collections.map.HashedMap;
-import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.exemodel.cache.ICache;
 import org.exemodel.cache.Promise;
 import org.exemodel.exceptions.JedisRuntimeException;
@@ -9,15 +8,11 @@ import org.exemodel.orm.ExecutableModel;
 import org.exemodel.orm.FieldAccessor;
 import org.exemodel.orm.ModelMeta;
 import org.exemodel.session.AbstractSession;
-import org.exemodel.util.BinaryUtil;
-import org.exemodel.util.MapTo;
-import org.exemodel.util.ParameterBindings;
-import org.exemodel.util.StringUtil;
+import org.exemodel.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.*;
 
-import java.lang.reflect.Field;
 import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -80,6 +75,7 @@ public class RedisTemplate implements ICache {
         return new RedisTemplate(this.host,this.port,this.timeout,this.database,this.ssl);
     }
 
+    @Override
     public  Jedis getJedis() {
         assert !lockJedis.isHeldByCurrentThread();
         lockJedis.lock();
@@ -183,18 +179,28 @@ public class RedisTemplate implements ICache {
         }
     }
 
+
     @Override
-    public <K, V,E> Map<E, V> batchGet(Collection<? extends K> source, MapTo<E,K> mapTo, Class<V> clazz, String... fields) {
+    public <S, K,V> Map<K, V> batchGet(Collection<? extends S> source, MapTo<K,S> mapTo, Class<V> clazz, String... fields) {
         if(source==null||source.size()==0){
             return null;
         }
-        HashSet<E> hashSet = new HashSet<>();
-        for (K k:source){
-            if(k!=null){
-                hashSet.add(mapTo.apply(k));
+        HashSet<K> hashSet = new HashSet<>();
+        for (S s:source){
+            if(s!=null){
+                hashSet.add(mapTo.apply(s));
             }
         }
-        return batchGet((E[]) hashSet.toArray(),clazz,fields);
+        return batchGet((K[]) hashSet.toArray(),clazz,fields);
+    }
+
+
+    @Override
+    public <S, K, V> void fill(Collection<? extends S> source, MapTo<K, S> getKey, BiConsumer<S, V> handler, Class<V> vClass, String... fields) {
+        Map<K,V> map = batchGet(source,getKey,vClass,fields);
+        for(S s:source){
+            handler.accept(s,map.get(getKey.apply(s)));
+        }
     }
 
     @Override

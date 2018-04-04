@@ -107,7 +107,7 @@ public abstract class AbstractSession implements Session {
         return defaultSessionFactory.createJdbcConnection();
     }
 
-
+    @Override
     public ICache getCache(){
         if(cache==null){
             ICache iCache = defaultSessionFactory.getCache();
@@ -217,9 +217,6 @@ public abstract class AbstractSession implements Session {
     private volatile boolean pmdKnownBroken = false;
 
     /**
-     * Fill the <code>PreparedStatement</code> replacement parameters with the
-     * given objects.
-     *
      * @param stmt
      *            PreparedStatement to fill
      * @param params

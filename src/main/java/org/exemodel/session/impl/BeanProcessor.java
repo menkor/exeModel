@@ -1,6 +1,4 @@
 package org.exemodel.session.impl;
-
-import com.sun.javafx.binding.StringFormatter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.exemodel.exceptions.JdbcRuntimeException;
@@ -15,6 +13,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 
 @SuppressWarnings("unchecked")
 public class BeanProcessor {
@@ -88,7 +87,7 @@ public class BeanProcessor {
                 }
                 FieldAccessor accessor = accessorMap.get(StringUtil.underscoreName(columnName));
                 if(accessor == null){
-                    logger.warn(String.format("Result column %s has selected but not be stored to %s",columnName,type),(new Throwable()));
+                    logger.warn(String.format("Result column %s has selected but not be stored to %s",columnName,type));
                 }else{
                     Class<?> columnType = accessor.getPropertyType();
                     Object value = processColumn(resultSet,i+1,columnType);

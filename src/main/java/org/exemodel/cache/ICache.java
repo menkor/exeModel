@@ -1,6 +1,7 @@
 package org.exemodel.cache;
 
 import org.exemodel.orm.ExecutableModel;
+import org.exemodel.util.BiConsumer;
 import org.exemodel.util.MapTo;
 import redis.clients.jedis.Jedis;
 
@@ -69,8 +70,23 @@ public interface ICache {
      */
     <K,V> Map<K,V> batchGet(K[] ids, Class<V> clazz, String... fields);
 
-    <K,V,E> Map<E,V> batchGet(Collection<? extends K> source, MapTo<E, K> mapTo, Class<V> clazz,
+    <S,K,V> Map<K,V> batchGet(Collection<? extends S> source, MapTo<K, S> getKey, Class<V> clazz,
         String... fields);
+
+
+    /**
+     *  fill collection with cache model
+     * @param source  source collection
+     * @param getKey  the function of get key from source element
+     * @param handler fill function
+     * @param vClass  the class of cached model
+     * @param fields  need be filled fields of S
+     * @param <S>  source element
+     * @param <K>  cached model key
+     * @param <V>  cached model
+     */
+    <S, K, V> void fill(Collection<? extends S> source, MapTo<K, S> getKey, BiConsumer<S, V> handler,Class<V> vClass,String... fields);
+
 
     /**
      * batch save entities to cache
