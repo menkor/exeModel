@@ -232,7 +232,7 @@ public class StringUtil {
     }
 
     public static int indexOfDifference(String str1, String str2) {
-        if (str1 == str2) {
+        if (str1.equals(str2)) {
             return INDEX_NOT_FOUND;
         }
         if (str1 == null || str2 == null) {
