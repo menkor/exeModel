@@ -301,12 +301,12 @@ public class UserDaoTest {
         }
     }
 
-    @Test
-    public void testMutilResultSetOfProcedure() throws SQLException{
-        TestVO testVO = AbstractSession.currentSession()
-                .callProcedure(TestVO.class," call test_mutil_result_set(?)",new ParameterBindings("zp"));
-        System.out.println();
-    }
+//    @Test
+//    public void testMutilResultSetOfProcedure() throws SQLException{
+//        TestVO testVO = AbstractSession.currentSession()
+//                .callProcedure(TestVO.class," call test_mutil_result_set(?)",new ParameterBindings("zp"));
+//        System.out.println();
+//    }
 
 
 

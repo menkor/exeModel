@@ -221,7 +221,8 @@ public class ModelMeta {
         ModelMeta modelMeta = modelMetaCache.get(modelCls);
         if (modelMeta == null) {
             synchronized (ModelMeta.class) {
-                if (modelMetaCache.get(modelCls) == null) {
+                modelMeta = modelMetaCache.get(modelCls);
+                if (modelMeta == null) {
                     modelMeta = new ModelMeta(modelCls);
                     modelMetaCache.put(modelCls, modelMeta);
                 }

@@ -19,7 +19,6 @@
         </repository>
     </repositories>
     <dependencies>
-
         <dependency>
             <groupId>com.baidu</groupId>
             <artifactId>jprotobuf</artifactId>
@@ -121,7 +120,18 @@
                     <source>1.7</source>
                     <target>1.7</target>
                 </configuration>
-
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <!-- explicitly define maven-deploy-plugin after other to force exec order -->

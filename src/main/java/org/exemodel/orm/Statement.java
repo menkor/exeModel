@@ -28,6 +28,7 @@ public abstract class Statement<T> extends SqlBuilder<T> {
   protected ModelMeta getModelMeta() {
     if (modelMeta == null) {
       synchronized (this) {
+
         modelMeta = ModelMeta.getModelMeta(modelClass);
       }
     }
@@ -144,7 +145,7 @@ public abstract class Statement<T> extends SqlBuilder<T> {
         if (cached != null) {
           return (E) cached;
         }
-        ExecutableModel fromDb = (ExecutableModel)getSession().findOneByNativeSql(this.modelClass, sql,sqlParams);
+        ExecutableModel fromDb = (ExecutableModel) getSession().findOneByNativeSql(this.modelClass, sql,sqlParams);
         if (fromDb != null) {//save the whole cached org.exemodel.entity
           FieldAccessor fieldAccessor = modelMeta.getIdAccessor();
           fieldAccessor.setProperty(fromDb, key);
