@@ -2,12 +2,12 @@ package org.exemodel.orm;
 
 
 import org.exemodel.annotation.MethodName;
+import org.exemodel.plugin.Transferable;
 import org.exemodel.util.StringUtil;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -111,47 +111,32 @@ public class FieldAccessor {
     }
 
     public Object getProperty(Object obj) {
-        if (getMethod != null) {
-            try {
-                return getMethod.invoke(obj);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+        Object value = get(obj);
+        if(value!=null && Transferable.class.isAssignableFrom(field.getType())){
+            return ((Transferable) value).to();
         }
-        if (field != null) {
-            try {
-                return field.get(obj);
-            } catch (IllegalAccessException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        throw new RuntimeException(String.format("Can't find accessor of get property value of %s", name));
+        return value;
     }
+
+
 
     public void setProperty(Object obj, Object value) {
         Class<?> type = getPropertyType();
         if (value == null && type.isPrimitive()) {
             value = primitiveDefaults.get(type);
         }
+        if(value!= null && type!= value.getClass()&&Transferable.class.isAssignableFrom(type)){
+            try {
+                Transferable instance = (Transferable) (type.isEnum()?type.getEnumConstants()[0]:type.newInstance());
+                set(obj,instance.from(value));
+                return;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
 
         if (this.isCompatibleType(value, type)) {
-            if (setMethod != null) {
-                try {
-                    setMethod.invoke(obj, value);
-                    return;
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            if (field != null) {
-                try {
-                    field.set(obj, value);
-                    return;
-                } catch (IllegalAccessException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-            throw new RuntimeException(String.format("Can't find accessor of set property %s", name));
+            set(obj,value);
         }else {
             throw new RuntimeException(String.format("Can't set type %s %s to field  %s type %s",value.getClass(),value,name,type));
         }
@@ -247,5 +232,43 @@ public class FieldAccessor {
             return false;
         }
         return false;
+    }
+
+    private Object get(Object obj) {
+        if (getMethod != null) {
+            try {
+                return getMethod.invoke(obj);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        if (field != null) {
+            try {
+                return field.get(obj);
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        throw new RuntimeException(String.format("Can't find accessor of get property value of %s", name));
+    }
+
+    private void  set(Object obj, Object value){
+        if (setMethod != null) {
+            try {
+                setMethod.invoke(obj, value);
+                return;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        if (field != null) {
+            try {
+                field.set(obj, value);
+                return;
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        throw new RuntimeException(String.format("Can't find accessor of set property %s", name));
     }
 }

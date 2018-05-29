@@ -15,6 +15,8 @@ CREATE TABLE `user` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(32) DEFAULT NULL,
   `age` int(11) DEFAULT NULL,
+  `public_info` int(11) DEFAULT NULL,
+  `gender` int(11) DEFAULT NULL,
   `details` text,
   `id_card` varchar(32) DEFAULT NULL,
   `money` decimal(15,2) DEFAULT '0.00',

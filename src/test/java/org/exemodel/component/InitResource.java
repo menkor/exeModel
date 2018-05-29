@@ -21,9 +21,9 @@ public class InitResource  {
 
         dataSource = new DruidDataSource();
         dataSource.setDriverClassName("com.mysql.jdbc.Driver");
-        dataSource.setUsername("menkor_release");
-        dataSource.setPassword("Superid123");
-        dataSource.setUrl("jdbc:mysql://116.62.146.35:3306/menkor_release?autoReconnect=true&rewriteBatchedStatements=true&socketTimeout=30000&connectTimeout=3000");
+        dataSource.setUsername("root");
+        dataSource.setPassword("simu123");
+        dataSource.setUrl("jdbc:mysql://192.168.1.204:3306/jpa?autoReconnect=true&useUnicode=true&characterEncoding=utf-8&useSSL=false");
         dataSource.setInitialSize(5);
         dataSource.setMinIdle(1);
         dataSource.setMaxActive(1000);

@@ -18,7 +18,6 @@ public class Role extends ExecutableModel{
     private String details;
     private String permissions;
 
-
     @Id
     public Integer getId() {
         return id;

@@ -4,9 +4,11 @@ import org.apache.commons.logging.LogFactory;
 import org.exemodel.exceptions.JdbcRuntimeException;
 import org.exemodel.orm.FieldAccessor;
 import org.exemodel.orm.ModelMeta;
+import org.exemodel.plugin.Transferable;
 import org.exemodel.util.StringUtil;
 
 import java.io.InputStream;
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.*;
@@ -59,6 +61,13 @@ public class BeanProcessor {
             }
         }else if (value instanceof String && type.isEnum()) {
             value = Enum.valueOf(type.asSubclass(Enum.class), (String) value);
+        }else if(value instanceof Integer && Transferable.class.isAssignableFrom(type)){
+            try {
+                Transferable instance = (Transferable) (type.isEnum()?type.getEnumConstants()[0]:type.newInstance());
+                return instance.from(value);
+            } catch (Exception e) {
+                throw new JdbcRuntimeException(e.getMessage());
+            }
         }
         return value;
     }

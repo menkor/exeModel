@@ -577,15 +577,28 @@ public class JdbcSession extends AbstractSession {
     @Override
     public <T> List<T> findListByNativeSql(Class<? extends T> cls, String queryString,
                                            ParameterBindings parameterBindings, Pagination pagination) {
-        queryString = queryString.toUpperCase();
-        int lastOrderIndex = queryString.lastIndexOf(" ORDER BY");
+        queryString = queryString.toLowerCase();
+        int lastOrderIndex = queryString.lastIndexOf(" order by");
         int lastRightBracketIndex = queryString.lastIndexOf(")");
         if (lastOrderIndex < lastRightBracketIndex) {
             throw new JdbcRuntimeException("Pagination query need order by one column");
         }
 
+
+        StringBuilder querySb = new StringBuilder(queryString);
+        querySb.append(" LIMIT ? , ?");
+        parameterBindings.addIndexBinding(pagination.getOffset());
+        parameterBindings.addIndexBinding(pagination.getSize());
+        List<T> list = findListByNativeSql(cls, querySb.toString(), parameterBindings);
+
+        if (list.size() < pagination.getSize() && pagination.getPage() == 1) {
+            pagination.setTotal(list.size());
+            return list;
+        }
+
+        //fetch total
         if (pagination.isNeedTotal()) {
-            int fromIndex = queryString.indexOf(" FROM");
+            int fromIndex = queryString.indexOf(" from");
             StringBuilder countSb = new StringBuilder("SELECT COUNT(*)");
             countSb.append(queryString.substring(fromIndex, lastOrderIndex));
             long count = 0;
@@ -603,16 +616,6 @@ public class JdbcSession extends AbstractSession {
             pagination.setTotal(-1);
         }
 
-        StringBuilder querySb = new StringBuilder(queryString);
-        querySb.append(" LIMIT ? , ?");
-        parameterBindings.addIndexBinding(pagination.getOffset());
-        parameterBindings.addIndexBinding(pagination.getSize());
-        List<T> list = findListByNativeSql(cls, querySb.toString(), parameterBindings);
-
-        if (list.size() < pagination.getSize() && pagination.getPage() == 1
-                && pagination.getTotal() < list.size()) {
-            pagination.setTotal(list.size());
-        }
         return list;
     }
 

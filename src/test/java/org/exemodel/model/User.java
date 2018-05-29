@@ -1,5 +1,7 @@
 package org.exemodel.model;
 
+import org.exemodel.component.Gender;
+import org.exemodel.component.PublicInfoDTO;
 import org.exemodel.orm.ExecutableModel;
 
 import javax.persistence.Entity;
@@ -28,6 +30,8 @@ public class User  extends ExecutableModel{
     private Timestamp createTime;
     private BigInteger serialNo;
     private byte[] pwd;
+    private Gender gender;
+    private PublicInfoDTO publicInfo;
 
     @Id
     public int getId() {
@@ -111,6 +115,21 @@ public class User  extends ExecutableModel{
         this.pwd = pwd;
     }
 
+    public Gender getGender() {
+        return gender;
+    }
+
+    public void setGender(Gender gender) {
+        this.gender = gender;
+    }
+
+    public PublicInfoDTO getPublicInfo() {
+        return publicInfo;
+    }
+
+    public void setPublicInfo(PublicInfoDTO publicInfo) {
+        this.publicInfo = publicInfo;
+    }
 
     @Override
     public String toString() {
@@ -125,6 +144,7 @@ public class User  extends ExecutableModel{
                 ", createTime=" + createTime +
                 ", serialNo=" + serialNo +
                 ", pwd=" + Arrays.toString(pwd) +
+                ", gender=" + gender +
                 '}';
     }
 }

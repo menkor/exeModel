@@ -36,9 +36,16 @@ public class UserDaoTest {
     public void testUpdate() {
         User user = testSave();
         user.setAge(25);
+        user.setName("HanMeiMei");
+        user.setGender(Gender.FEMALE);
+        PublicInfoDTO publicInfoDTO = new PublicInfoDTO();
+        publicInfoDTO.setAddress(true);
+        user.setPublicInfo(publicInfoDTO);
         user.update();
         User _user = getStatement().findById(user.getId());
         Assert.assertTrue(_user.getAge() == 25);
+        Assert.assertTrue(_user.getPublicInfo().isAddress());
+        Assert.assertFalse(_user.getPublicInfo().isGender());
     }
 
 
@@ -313,6 +320,7 @@ public class UserDaoTest {
     private User testSave() {
         User user = new User();
         user.setName("zp");
+        user.setGender(Gender.MAN);
         user.setAge(18);
         user.save();
         return user;
