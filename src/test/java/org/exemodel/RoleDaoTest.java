@@ -157,6 +157,7 @@ public class RoleDaoTest {
         Role role = addRole();
         RoleUpdateForm roleUpdateForm = new RoleUpdateForm();
         roleUpdateForm.setPermissions("set_by_object");
+        roleUpdateForm.setNotExists(0);
 
         CustomStatement.build(Role.class).id(role.getId()).setByObject(roleUpdateForm);
         Role role1 = CustomStatement.build(Role.class).findCache(role.getId());

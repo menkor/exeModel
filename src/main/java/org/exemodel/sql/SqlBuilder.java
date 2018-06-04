@@ -1,4 +1,4 @@
-package org.exemodel.orm;
+package org.exemodel.sql;
 
 import org.exemodel.util.Expr;
 import org.exemodel.util.ParameterBindings;

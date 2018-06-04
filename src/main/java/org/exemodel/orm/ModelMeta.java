@@ -3,6 +3,8 @@ package org.exemodel.orm;
 import org.exemodel.annotation.CacheField;
 import org.exemodel.annotation.Cacheable;
 import org.exemodel.annotation.PartitionId;
+import org.exemodel.sql.ISqlGenerator;
+import org.exemodel.sql.SqlGenerator;
 import org.exemodel.util.BinaryUtil;
 import org.exemodel.util.StringUtil;
 
@@ -24,12 +26,14 @@ public class ModelMeta {
     private String findByIdSql;
     private String findByPartitionIdSql;
     private boolean cacheable = false;
+    private boolean isAllCached = false;
     private byte[] key = null;
     private List<ModelColumnMeta> columnMetaList;
     private ModelColumnMeta idColumnMeta;
     private ModelColumnMeta partitionColumn;
     private volatile List<String> cacheColumnList;//{index:fieldName}
     private volatile Map<String, FieldAccessor> accessorMap;
+    private ISqlGenerator sqlGenerator = new SqlGenerator();
 
     /**
      * column info of orm org.exemodel.entity class, ignore all fieldNameBytes with @javax.sql.Transient
@@ -99,119 +103,42 @@ public class ModelMeta {
 
     public String getInsertSql() {
         if (this.insertSql == null) {
-            initInsertSql();
+            this.insertSql = sqlGenerator.insert(this);
         }
         return this.insertSql;
     }
 
-    private synchronized void initInsertSql() {//init insert sql
-        boolean first = true;
-        StringBuilder sql = new StringBuilder("INSERT INTO ");
-        sql.append(this.getTableName());
-        sql.append(" (");
-
-        for (ModelColumnMeta columnMeta : columnMetaList) {
-            if (first) {
-                first = false;
-            } else {
-                sql.append(",");
-            }
-            sql.append(columnMeta.columnName);
-        }
-
-        sql.append(")");
-        sql.append(" VALUES (");
-        int size = this.getColumnMetaSet().size();
-        for (int i = 0; i < size; i++) {
-            if (i != 0) {
-                sql.append(",");
-            }
-            sql.append('?');
-        }
-        sql.append(")");
-        this.insertSql = sql.toString();
-    }
 
     public String getUpdateSql() {
         if (this.updateSql == null) {
-            initUpdateSql();
+            this.updateSql = sqlGenerator.update(this);
         }
         return updateSql;
     }
 
-    private synchronized void initUpdateSql() {
-        boolean first = true;
-        StringBuilder sql = new StringBuilder("UPDATE ");
-        sql.append(this.getTableName());
-        sql.append(" SET ");
-        for (ModelColumnMeta columnMeta : columnMetaList) {
-            if (!columnMeta.isId && !columnMeta.isPartition) {// id and partitionId can't set
-                if (first) {
-                    first = false;
-                } else {
-                    sql.append(",");
-                }
-                sql.append(columnMeta.columnName);
-                sql.append("=? ");
-            }
-        }
-        sql.append(" WHERE ");
-        generatePartitionCondition(sql);
-        sql.append(this.idColumnMeta.columnName);
-        sql.append("=?");
-
-        this.updateSql = sql.toString();
-    }
 
     public String getDeleteSql() {
         if (deleteSql == null) {
-            initDeleteSql();
+            this.deleteSql = sqlGenerator.delete(this);
         }
         return deleteSql;
     }
 
-    private synchronized void initDeleteSql() {
-        StringBuilder sql = new StringBuilder("DELETE FROM ");
-        sql.append(this.getTableName());
-        sql.append(" WHERE ");
-        generatePartitionCondition(sql);
-        sql.append(this.idColumnMeta.columnName);
-        sql.append("=?");
-        this.deleteSql = sql.toString();
-    }
 
 
-    private void generatePartitionCondition(StringBuilder sql) {
-        if (this.partitionColumn != null) {
-            sql.append(this.partitionColumn.columnName);
-            sql.append("=? and ");
-        }
-    }
 
     public String getFindByIdSql() {
         if (findByIdSql == null) {
-            findByIdSql = initFindByIdSql(false);
+            findByIdSql = sqlGenerator.findById(this,false);
         }
         return findByIdSql;
     }
 
     public String getFindByPartitionIdSql() {
         if (findByPartitionIdSql == null) {
-            findByPartitionIdSql = initFindByIdSql(true);
+            findByPartitionIdSql = sqlGenerator.findById(this,true);
         }
         return findByPartitionIdSql;
-    }
-
-    private synchronized String initFindByIdSql(boolean partition) {
-        StringBuilder sql = new StringBuilder("SELECT * FROM ");
-        sql.append(this.getTableName());
-        sql.append(" WHERE ");
-        if (partition) {
-            generatePartitionCondition(sql);
-        }
-        sql.append(this.idColumnMeta.columnName);
-        sql.append("=? limit 1");
-        return sql.toString();
     }
 
 
@@ -244,6 +171,7 @@ public class ModelMeta {
         }
         Cacheable cacheable = modelCls.getAnnotation(Cacheable.class);
         if (cacheable != null) {
+            this.isAllCached = cacheable.all();
             this.cacheable = true;
             String key = cacheable.key();
             if (StringUtil.isEmpty(key)) {
@@ -315,9 +243,13 @@ public class ModelMeta {
                     cacheColumnList = new ArrayList<>();
                     for (ModelColumnMeta columnMeta : this.columnMetaList) {
                         if (!columnMeta.isId) {
-                            CacheField cacheField = columnMeta.fieldAccessor.getPropertyAnnotation(CacheField.class);
-                            if (cacheField != null) {
+                            if(isAllCached){
                                 cacheColumnList.add(columnMeta.columnName);
+                            }else{
+                                CacheField cacheField = columnMeta.fieldAccessor.getPropertyAnnotation(CacheField.class);
+                                if (cacheField != null) {
+                                    cacheColumnList.add(columnMeta.columnName);
+                                }
                             }
                         }
                     }
@@ -328,6 +260,7 @@ public class ModelMeta {
                             columnMeta.cacheOrder = BinaryUtil.toBytes(index);
                         }
                     }
+                    this.isAllCached = cacheColumnList.size()==(columnMetaList.size()-1);
                 }
             }
         }
@@ -375,6 +308,7 @@ public class ModelMeta {
         return res;
     }
 
+
     public Map<String, FieldAccessor> getAccessorMap() {
         if (accessorMap == null) {
             synchronized (this) {
@@ -389,4 +323,19 @@ public class ModelMeta {
         }
         return accessorMap;
     }
+
+    public boolean existColumn(String column){
+        for (ModelColumnMeta columnMeta : columnMetaList) {
+            if(columnMeta.columnName.equals(column)){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isAllCached(){
+        return isAllCached;
+    }
+
+
 }

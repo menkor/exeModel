@@ -4,6 +4,7 @@ package org.exemodel.component;
  * Created by zp on 17/2/17.
  */
 public class RoleUpdateForm {
+    private int notExists;
     private int id;
     private String title;
     private String details;
@@ -39,5 +40,13 @@ public class RoleUpdateForm {
 
     public void setPermissions(String permissions) {
         this.permissions = permissions;
+    }
+
+    public int getNotExists() {
+        return notExists;
+    }
+
+    public void setNotExists(int notExists) {
+        this.notExists = notExists;
     }
 }

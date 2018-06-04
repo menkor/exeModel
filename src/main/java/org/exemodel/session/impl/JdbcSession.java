@@ -763,6 +763,8 @@ public class JdbcSession extends AbstractSession {
         }
     }
 
+
+
     private void setGeneratedId(FieldAccessor idAccessor, Object entity, Object id) {
         Class<?> type = idAccessor.getPropertyType();
         if (id instanceof Number) {
