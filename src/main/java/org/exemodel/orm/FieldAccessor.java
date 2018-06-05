@@ -82,10 +82,8 @@ public class FieldAccessor {
         }
     }
 
-
-
     /**
-     * get cn.superid.constantapi.annotation of this property, first find on field, then find on get-field-method, then on set-field-method
+     * first find on field, then find on get-field-method, then on set-field-method
      *
      * @param annoCls
      * @param <T>

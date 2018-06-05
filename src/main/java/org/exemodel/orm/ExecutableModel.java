@@ -84,22 +84,32 @@ public abstract class ExecutableModel implements Serializable{
     }
 
     public void copyPropertiesTo(Object to){
-       getSession().copyProperties(this,to,false,false);
+       copyProperties(this,to,false,false);
     }
 
     public void copyPropertiesFrom(Object from){
-       getSession().copyProperties(from,this,false,false);
+       copyProperties(from,this,false,false);
     }
 
     public void copyPropertiesToAndSkipNull(Object to){
-        getSession().copyProperties(this,to,true,true);
+        copyProperties(this,to,true,true);
     }
 
     public void copyPropertiesFromAndSkipNull(Object from){
-        getSession().copyProperties(from,this,true,true);
+        copyProperties(from,this,true,true);
     }
 
-    public Map<byte[],byte[]> generateHashByteMap(){ return getSession().generateHashByteMap(this);}
+    public Map<byte[],byte[]> generateHashByteMap(){
+        ModelMeta meta = ModelMeta.getModelMeta(this.getClass());
+        HashMap<byte[], byte[]> hashMap = new HashMap<>(meta.getColumnMetaSet().size());
+        for (ModelMeta.ModelColumnMeta modelColumnMeta : meta.getColumnMetaSet()) {
+            if(modelColumnMeta.isId||modelColumnMeta.cacheOrder==null){
+                continue;
+            }
+            FieldAccessor fieldAccessor = modelColumnMeta.fieldAccessor;
+            hashMap.put(modelColumnMeta.cacheOrder, BinaryUtil.getBytes(fieldAccessor.getProperty(this)));
+        }
+        return hashMap;}
 
     public byte[] generateKey(){
         ModelMeta meta = ModelMeta.getModelMeta(this.getClass());
@@ -138,5 +148,29 @@ public abstract class ExecutableModel implements Serializable{
 
     public Object generateId(){
         return null;
+    }
+
+    private  void copyProperties(Object from, Object to, boolean skipNull,boolean skipId) {
+        if(from==null||to==null){
+            return;
+        }
+        ModelMeta fromMeta = ModelMeta.getModelMeta(from.getClass());
+        ModelMeta toMeta = ModelMeta.getModelMeta(to.getClass());
+        for (ModelMeta.ModelColumnMeta fromColumnMeta : fromMeta.getColumnMetaSet()) {
+            for (ModelMeta.ModelColumnMeta toColumnMeta : toMeta.getColumnMetaSet()) {
+                if (fromColumnMeta.isId && skipId) {
+                    continue;
+                }
+                if (toColumnMeta.fieldName.equals(fromColumnMeta.fieldName)){
+                    FieldAccessor fromFa = fromColumnMeta.fieldAccessor;
+                    Object value = fromFa.getProperty(from);
+                    if (skipNull && value == null) {
+                        continue;
+                    }
+                    FieldAccessor toFa = toColumnMeta.fieldAccessor;
+                    toFa.setProperty(to, fromFa.getProperty(from));
+                }
+            }
+        }
     }
 }

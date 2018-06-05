@@ -1,4 +1,4 @@
-package org.exemodel.sql;
+package org.exemodel.builder;
 
 import org.exemodel.util.Expr;
 import org.exemodel.util.ParameterBindings;
@@ -89,6 +89,11 @@ public abstract class SqlBuilder<T> {
         return and(column,">=",value);
     }
 
+    /**
+     * column is null
+     * @param column
+     * @return
+     */
     public T isNull(String column){
         where.append(" AND ");
         where.append(StringUtil.underscoreName(column));
@@ -96,6 +101,11 @@ public abstract class SqlBuilder<T> {
         return (T)this;
     }
 
+    /**
+     * column is not null
+     * @param column
+     * @return
+     */
     public T isNotNull(String column){
         where.append(" AND ");
         where.append(StringUtil.underscoreName(column));
@@ -104,28 +114,6 @@ public abstract class SqlBuilder<T> {
     }
 
 
-    private T inSqlGenerate(String column, Object[] values,String op){
-        if( values==null || values.length == 0){
-            where.append(" AND 0 = 1 ");
-            return (T) this;
-        }
-        where.append(" AND ");
-        where.append(Expr.inSqlGenerator(op,column, values, parameterBindings));
-        return (T) this;
-    }
-
-    private T inSqlGenerate(String column,List list,String op){
-        if( list== null || list.size() == 0){
-            where.append(" AND 0 = 1 ");
-            return (T) this;
-        }
-        Object[] values = new Object[list.size()];
-        int i=0;
-        for (Object o:list){
-            values[i++] = o;
-        }
-        return inSqlGenerate(column,values,op);
-    }
 
     public T in(String column,List values){
         return inSqlGenerate(column,values," IN ");
@@ -222,5 +210,30 @@ public abstract class SqlBuilder<T> {
         where.append(")");
         return (T)this;
     }
+
+
+    private T inSqlGenerate(String column, Object[] values,String op){
+        if( values==null || values.length == 0){
+            where.append(" AND 0 = 1 ");
+            return (T) this;
+        }
+        where.append(" AND ");
+        where.append(Expr.inSqlGenerator(op,column, values, parameterBindings));
+        return (T) this;
+    }
+
+    private T inSqlGenerate(String column,List list,String op){
+        if( list== null || list.size() == 0){
+            where.append(" AND 0 = 1 ");
+            return (T) this;
+        }
+        Object[] values = new Object[list.size()];
+        int i=0;
+        for (Object o:list){
+            values[i++] = o;
+        }
+        return inSqlGenerate(column,values,op);
+    }
+
 
 }

@@ -215,17 +215,8 @@ public interface Session extends AutoCloseable{
     int executeUpdate(String sql, Object[] params);
 
 
-    void copyProperties(Object from, Object to, boolean skipNull, boolean skipId);
-
-    HashMap<String, Object> generateHashMapFromEntity(Object entity, boolean skipNull);
-
-    HashMap<byte[], byte[]> generateHashByteMap(Object entity);
-
-    <T> T generateHashMapFromEntity(HashMap<String, Object> hashMap, Object entity);
-
-    <T> T generateEntityFromHashMap(HashMap<byte[], byte[]> hashMap, Object entity);
-
     ICache getCache();
+
 
     boolean isInCacheBatch();
 

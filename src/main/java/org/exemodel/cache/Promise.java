@@ -42,7 +42,7 @@ public abstract class Promise {
         if(o==null){
             result.setValid(false);
         }else{
-            AbstractSession.currentSession().copyProperties(o,result,false,true);
+            result.copyPropertiesFrom(o);
             result.setValid(true);
         }
     }

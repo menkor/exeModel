@@ -123,22 +123,6 @@ public class UserDaoTest {
 
     }
 
-    @Test
-    public void testHashMapFromEntity() {
-        User user = new User();
-        user.setName("src/test");
-        user.setAge(18);
-        user.save();
-
-        HashMap<String, Object> hashMap = User.getSession().generateHashMapFromEntity(user, false);
-        Assert.assertTrue(hashMap.get("age").equals(18));
-
-        User user1 = new User();
-        User.getSession().generateHashMapFromEntity(hashMap, user1);
-        Assert.assertTrue(user1.getAge() == 18);
-
-    }
-
 
     @Test
     public void testSet() {
@@ -308,12 +292,11 @@ public class UserDaoTest {
         }
     }
 
-//    @Test
-//    public void testMutilResultSetOfProcedure() throws SQLException{
-//        TestVO testVO = AbstractSession.currentSession()
-//                .callProcedure(TestVO.class," call test_mutil_result_set(?)",new ParameterBindings("zp"));
-//        System.out.println();
-//    }
+    @Test
+    public void testMutilResultSetOfProcedure() throws SQLException{
+        TestVO testVO = AbstractSession.currentSession()
+                .callProcedure(TestVO.class," call test_mutil_result_set(?)",new ParameterBindings("zp"));
+    }
 
 
 

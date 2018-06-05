@@ -5,7 +5,7 @@ import org.exemodel.cache.Promise;
 import org.exemodel.exceptions.JdbcRuntimeException;
 import org.exemodel.session.AbstractSession;
 import org.exemodel.session.Session;
-import org.exemodel.sql.SqlBuilder;
+import org.exemodel.builder.SqlBuilder;
 import org.exemodel.util.*;
 
 import java.util.ArrayList;
@@ -29,7 +29,6 @@ public abstract class Statement<T> extends SqlBuilder<T> {
     protected ModelMeta getModelMeta() {
         if (modelMeta == null) {
             synchronized (this) {
-
                 modelMeta = ModelMeta.getModelMeta(modelClass);
             }
         }
@@ -118,22 +117,53 @@ public abstract class Statement<T> extends SqlBuilder<T> {
 
     public <E> E selectOne(final Class modelClass, String... fields) {
         ModelMeta modelMeta = getModelMeta();
-        if(modelClass.equals(this.modelClass)){
-            if(isEmpty(fields)&&!getModelMeta().isAllCached()){
-                return (E) getSession().findOneByNativeSql(modelClass,
-                        findOne(modelMeta.getTableName(), fields), parameterBindings);
-            }
-        }else if (isEmpty(fields)){
-            fields = generateFields(modelClass);
-        }
-
-
+        ModelMeta resultModelMetal = ModelMeta.getModelMeta(modelClass);
         if (isCacheable() && key != null && fields.length != 0) {
+            byte[][] bytes = modelMeta.convertToBytes(StringUtil.underscoreNames(fields));
+            if (bytes != null) {
+                final String sql = findOne(modelMeta.getTableName(), modelMeta.getCachedFields());
+                final Object[] sqlParams = parameterBindings.getIndexParametersArray();
+                if (getSession().isInCacheBatch()) {
+                    try {
+                        ExecutableModel res = (ExecutableModel) modelClass.newInstance();
+                        Promise promise = new Promise(res) {
+                            @Override
+                            public Object onFail() {
+                                return getSession().findOneByNativeSql(modelClass, sql, sqlParams);
+                            }
+                        };
+                        promise.setFields(fields);
+                        promise.setModelMeta(resultModelMetal);
+                        getCache().get(key, modelClass, promise, bytes, fields);
+                        return (E) promise.getResult();
+                    } catch (Exception e) {
+                        throw new JdbcRuntimeException(e);
+                    }
+                }
 
+                Object cached = getCache().get(key, modelClass, null, bytes, fields);
+                if (cached != null) {
+                    return (E) cached;
+                }
+                ExecutableModel fromDb = (ExecutableModel) getSession().findOneByNativeSql(this.modelClass, sql,sqlParams);
+                if (fromDb != null) {//save the whole cached org.exemodel.entity
+                    FieldAccessor fieldAccessor = modelMeta.getIdAccessor();
+                    fieldAccessor.setProperty(fromDb, key);
+                    getCache().save(fromDb);
+                    try {
+                        Object res = modelClass.newInstance();
+                        fromDb.copyPropertiesTo(res);
+                        return (E) res;
+                    } catch (Exception e) {
+                        throw new JdbcRuntimeException(e);
+                    }
+                } else {
+                    return null;
+                }
+            }
         }
-        return (E) getSession().findOneByNativeSql(modelClass, findOne(modelMeta.getTableName(), fields),
-                parameterBindings);
-    }
+        return (E)getSession().findOneByNativeSql(modelClass, findOne(modelMeta.getTableName(), fields),
+                parameterBindings);    }
 
     /**
      * 以下几种set方法用于更新时
@@ -427,53 +457,4 @@ public abstract class Statement<T> extends SqlBuilder<T> {
         }
         return res.toArray(new String[res.size()]);
     }
-
-
-    private <E> E findCache(final Class modelClass, String... fields){
-        ModelMeta resultModelMetal = ModelMeta.getModelMeta(modelClass);
-        byte[][] bytes = modelMeta.convertToBytes(StringUtil.underscoreNames(fields));
-        if (bytes != null) {
-            final String sql = findOne(modelMeta.getTableName(), modelMeta.getCachedFields());
-            final Object[] sqlParams = parameterBindings.getIndexParametersArray();
-            if (getSession().isInCacheBatch()) {
-                try {
-                    ExecutableModel res = (ExecutableModel) modelClass.newInstance();
-                    Promise promise = new Promise(res) {
-                        @Override
-                        public Object onFail() {
-                            return getSession().findOneByNativeSql(modelClass, sql, sqlParams);
-                        }
-                    };
-                    promise.setFields(fields);
-                    promise.setModelMeta(resultModelMetal);
-                    getCache().get(key, modelClass, promise, bytes, fields);
-                    return (E) promise.getResult();
-                } catch (Exception e) {
-                    throw new JdbcRuntimeException(e);
-                }
-            }
-
-            Object cached = getCache().get(key, modelClass, null, bytes, fields);
-            if (cached != null) {
-                return (E) cached;
-            }
-            ExecutableModel fromDb = (ExecutableModel) getSession().findOneByNativeSql(this.modelClass, sql, sqlParams);
-            if (fromDb != null) {//save the whole cached org.exemodel.entity
-                FieldAccessor fieldAccessor = modelMeta.getIdAccessor();
-                fieldAccessor.setProperty(fromDb, key);
-                getCache().save(fromDb);
-                try {
-                    Object res = modelClass.newInstance();
-                    fromDb.copyPropertiesTo(res);
-                    return (E) res;
-                } catch (Exception e) {
-                    throw new JdbcRuntimeException(e);
-                }
-            } else {
-                return null;
-            }
-        }
-        return null;
-    }
-
 }

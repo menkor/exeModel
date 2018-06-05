@@ -102,6 +102,8 @@ public class RoleDaoTest {
                 res.add(role1);
             }
             session.executeCacheBatch();
+
+
             for (Role role : res) {
                 Assert.assertTrue(role != null);
             }

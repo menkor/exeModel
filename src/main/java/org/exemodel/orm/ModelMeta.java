@@ -3,8 +3,6 @@ package org.exemodel.orm;
 import org.exemodel.annotation.CacheField;
 import org.exemodel.annotation.Cacheable;
 import org.exemodel.annotation.PartitionId;
-import org.exemodel.sql.ISqlGenerator;
-import org.exemodel.sql.SqlGenerator;
 import org.exemodel.util.BinaryUtil;
 import org.exemodel.util.StringUtil;
 
@@ -20,11 +18,6 @@ public class ModelMeta {
     private Class<?> modelCls;
     private String tableName;
     private String tableSchema;
-    private String insertSql;
-    private String updateSql;
-    private String deleteSql;
-    private String findByIdSql;
-    private String findByPartitionIdSql;
     private boolean cacheable = false;
     private boolean isAllCached = false;
     private byte[] key = null;
@@ -33,8 +26,6 @@ public class ModelMeta {
     private ModelColumnMeta partitionColumn;
     private volatile List<String> cacheColumnList;//{index:fieldName}
     private volatile Map<String, FieldAccessor> accessorMap;
-    private ISqlGenerator sqlGenerator = new SqlGenerator();
-
     /**
      * column info of orm org.exemodel.entity class, ignore all fieldNameBytes with @javax.sql.Transient
      */
@@ -98,47 +89,6 @@ public class ModelMeta {
 
         this.columnMetaList = columnMetas;
         return columnMetas;
-    }
-
-
-    public String getInsertSql() {
-        if (this.insertSql == null) {
-            this.insertSql = sqlGenerator.insert(this);
-        }
-        return this.insertSql;
-    }
-
-
-    public String getUpdateSql() {
-        if (this.updateSql == null) {
-            this.updateSql = sqlGenerator.update(this);
-        }
-        return updateSql;
-    }
-
-
-    public String getDeleteSql() {
-        if (deleteSql == null) {
-            this.deleteSql = sqlGenerator.delete(this);
-        }
-        return deleteSql;
-    }
-
-
-
-
-    public String getFindByIdSql() {
-        if (findByIdSql == null) {
-            findByIdSql = sqlGenerator.findById(this,false);
-        }
-        return findByIdSql;
-    }
-
-    public String getFindByPartitionIdSql() {
-        if (findByPartitionIdSql == null) {
-            findByPartitionIdSql = sqlGenerator.findById(this,true);
-        }
-        return findByPartitionIdSql;
     }
 
 

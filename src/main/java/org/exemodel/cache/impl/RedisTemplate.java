@@ -1,6 +1,7 @@
 package org.exemodel.cache.impl;
 
 import org.apache.commons.collections.map.HashedMap;
+import org.exemodel.builder.CrudSqlGenerator;
 import org.exemodel.cache.ICache;
 import org.exemodel.cache.Promise;
 import org.exemodel.exceptions.JedisRuntimeException;
@@ -153,14 +154,7 @@ public class RedisTemplate implements ICache {
                 K id = ids[i++];
                 if (entity == null) {
                     if(sql==null){
-                        StringBuilder sb = new StringBuilder(" SELECT ");
-                        sb.append(StringUtil.joinParams(",",modelMeta.getCachedFields()));
-                        sb.append(" FROM ");
-                        sb.append(modelMeta.getTableName());
-                        sb.append(" WHERE ");
-                        sb.append(modelMeta.getIdColumnMeta().columnName);
-                        sb.append(" = ? limit 1 ");
-                        sql = sb.toString();
+                        sql = new CrudSqlGenerator().getFindByIdSql(clazz);
                     }
                     entity = AbstractSession.currentSession().findOneByNativeSql(clazz,sql,new ParameterBindings(id));
                     if(entity!=null){

@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.exemodel.builder.CrudSqlGenerator;
 import org.exemodel.cache.ICache;
 import org.exemodel.exceptions.JdbcRuntimeException;
 import org.exemodel.orm.ExecutableModel;
@@ -31,6 +32,7 @@ public class JdbcSession extends AbstractSession {
     private transient boolean isInBatch = false;
     private transient boolean isInCacheBatch = false;
     private transient PreparedStatement batchStatement;
+    private static CrudSqlGenerator sqlGenerator = new CrudSqlGenerator();
 
     public JdbcSession(Connection jdbcConnection) {
         this.jdbcConnection = jdbcConnection;
@@ -159,7 +161,7 @@ public class JdbcSession extends AbstractSession {
     @Override
     public boolean save(ExecutableModel entity) {
         final ModelMeta modelMeta = ModelMeta.getModelMeta(entity.getClass());
-        String sql = modelMeta.getInsertSql();
+        String sql = sqlGenerator.getInsertSql(entity.getClass());
         if (!isInBatch) {
             PreparedStatement preparedStatement = null;
             try {
@@ -224,7 +226,7 @@ public class JdbcSession extends AbstractSession {
             }
         }
         final FieldAccessor idAccessor = modelMeta.getIdAccessor();
-        String sql = modelMeta.getUpdateSql();
+        String sql = sqlGenerator.getUpdateSql(entity.getClass());
         if (!isInBatch) {
             PreparedStatement preparedStatement = null;
             try {
@@ -332,7 +334,7 @@ public class JdbcSession extends AbstractSession {
                         + modelMeta.getPartitionColumn().columnName);
             }
         }
-        String sql = modelMeta.getDeleteSql();
+        String sql = sqlGenerator.getDeleteSql(entity.getClass());
         if (!isInBatch) {
             PreparedStatement preparedStatement = null;
             try {
@@ -516,17 +518,13 @@ public class JdbcSession extends AbstractSession {
         if (partitionColumn != null) {
             boolean invalidPartitionId = NumberUtil.isUndefined(partitionId);
             if (invalidPartitionId) {
-                if (!modelMeta.isCacheable()) {
-                    throw new JdbcRuntimeException(
-                            "You should have partition column:" + partitionColumn.columnName);
-                }
-                sql = modelMeta.getFindByIdSql();
+                sql = sqlGenerator.getFindByIdSql(cls);
             } else {
-                sql = modelMeta.getFindByPartitionIdSql();
+                sql = sqlGenerator.getFindByPartitionIdSql(cls);
                 withPartitionId = true;
             }
         } else {
-            sql = modelMeta.getFindByIdSql();
+            sql = sqlGenerator.getFindByIdSql(cls);
         }
         PreparedStatement preparedStatement = null;
         try {
