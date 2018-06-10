@@ -109,7 +109,7 @@ public class Role extends ExecutableModel{
 ```
 
 
-###SQL操作###
+### SQL操作 ###
 ```java
 @Test
     public void testSave(){
@@ -406,7 +406,7 @@ public class Role extends ExecutableModel{
 ```
 
 
-##开启缓存操作##
+### 开启缓存操作 ###
 ```java
 @Test
     public void testFindCache() {
@@ -569,5 +569,5 @@ public class Role extends ExecutableModel{
         return roleList;
     }
 ```
-##Examples##
+## Examples ##
 [一般Dao操作](https://github.com/menkor/dfs-proxy/blob/master/src/main/java/com/simu/dao/impl/BucketDao.java)
