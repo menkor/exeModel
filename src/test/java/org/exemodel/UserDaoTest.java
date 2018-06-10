@@ -19,7 +19,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 
@@ -33,8 +32,18 @@ public class UserDaoTest {
 
 
     @Test
+    public void testSave(){
+        User user = new User();
+        user.setName("zp");
+        user.setGender(Gender.MAN);
+        user.setAge(18);
+        user.save();
+        Assert.assertTrue(user.getName().equals(findById(user.getId()).getName()));
+    }
+
+    @Test
     public void testUpdate() {
-        User user = testSave();
+        User user = saveUser();
         user.setAge(25);
         user.setName("HanMeiMei");
         user.setGender(Gender.FEMALE);
@@ -42,7 +51,7 @@ public class UserDaoTest {
         publicInfoDTO.setAddress(true);
         user.setPublicInfo(publicInfoDTO);
         user.update();
-        User _user = getStatement().findById(user.getId());
+        User _user = CustomStatement.build(User.class).findById(user.getId());
         Assert.assertTrue(_user.getAge() == 25);
         Assert.assertTrue(_user.getPublicInfo().isAddress());
         Assert.assertFalse(_user.getPublicInfo().isGender());
@@ -56,7 +65,7 @@ public class UserDaoTest {
         user.setAge(18);
         user.save();
         user.delete();
-        User _user = getStatement().findById(user.getId());
+        User _user = CustomStatement.build(User.class).findById(user.getId());
         Assert.assertTrue(_user == null);
     }
 
@@ -64,37 +73,37 @@ public class UserDaoTest {
     @Test
     public void testFindList() {
         String sql = "select * from user where name=?";
-        List<User> list = getStatement().findListByNativeSql(sql, "zp");
+        List<User> list = CustomStatement.build(User.class).findListByNativeSql(sql, "zp");
         Assert.assertTrue(list != null);
     }
 
     @Test
     public void testFindOne() {
-        testSave();
+        saveUser();
         String sql = "select id,name from user where name=? and age =? limit 1 ";
-        User user = getStatement().findOneByNativeSql(sql, "zp", 18);
+        User user = CustomStatement.build(User.class).findOneByNativeSql(sql, "zp", 18);
         Assert.assertTrue(user != null);
 
-        UserVO userVO = getStatement().eq("name","zp").selectOne(UserVO.class,"id"," name as username");
+        UserVO userVO = CustomStatement.build(User.class).eq("name","zp").selectOne(UserVO.class,"id"," name as username");
         Assert.assertTrue(userVO!=null);
     }
 
     @Test
     public void testSelectOne() {
-        testSave();
-        User user = getStatement().eq("name", "zp").selectOne("id", "name");
+        saveUser();
+        User user = CustomStatement.build(User.class).eq("name", "zp").selectOne("id", "name");
         Assert.assertTrue(user != null);
     }
 
 
     @Test
     public void testSelectList() {
-        List<User> users = getStatement().eq("name", "zp")
+        List<User> users = CustomStatement.build(User.class).eq("name", "zp")
                 .asc("age")
                 .selectList("id", "name");
 
         Assert.assertTrue(users != null);
-        List<Long> ids = getStatement().eq("name", "zp")
+        List<Long> ids = CustomStatement.build(User.class).eq("name", "zp")
                 .asc("age")
                 .selectList(Long.class, "id");
         Assert.assertTrue(ids != null);
@@ -104,9 +113,9 @@ public class UserDaoTest {
 
     @Test
     public void testOrConditions() {
-        List<User> users1 = getStatement().or(Expr.eq("name", "zp"), Expr.eq("name", "xxf")).selectList();
+        List<User> users1 = CustomStatement.build(User.class).or(Expr.eq("name", "zp"), Expr.eq("name", "xxf")).selectList();
         String[] names = {"zp", "xxf"};
-        List<User> users2 = getStatement().in("name", names).selectList();
+        List<User> users2 = CustomStatement.build(User.class).in("name", names).selectList();
         Assert.assertTrue(users1.size() == users2.size());
 
     }
@@ -117,7 +126,7 @@ public class UserDaoTest {
         user.setAge(33);
         user.setName("tms");
         user.save();
-        getStatement().eq("name", "tms").remove();
+        CustomStatement.build(User.class).eq("name", "tms").remove();
         Assert.assertTrue(findById(user.getId()) == null);
 
 
@@ -154,7 +163,7 @@ public class UserDaoTest {
     @Test
     public void testExecute() {
         User.executeUpdate("update user set name=? where name='zp'", new ParameterBindings("jzy"));
-        Assert.assertTrue(getStatement().eq("name", "zp").selectOne() == null);
+        Assert.assertTrue(CustomStatement.build(User.class).eq("name", "zp").selectOne() == null);
     }
 
 
@@ -178,7 +187,7 @@ public class UserDaoTest {
         Pagination pagination = new Pagination();
         pagination.setPage(1);
         pagination.setSize(20);
-        List<User> users = getStatement().eq("name", "xxf")
+        List<User> users = CustomStatement.build(User.class).eq("name", "xxf")
                 .asc("age")
                 .selectByPagination(pagination);
 
@@ -188,7 +197,7 @@ public class UserDaoTest {
 
     @Test
     public void testUpdateWithPartition() {
-        User user = testSave();
+        User user = saveUser();
         Role role = new Role();
         role.setTitle("开发人员");
         try {
@@ -204,7 +213,7 @@ public class UserDaoTest {
 
     @Test
     public void testDeleteWithPartition() {
-        User user = testSave();
+        User user = saveUser();
         Role role = new Role();
         role.setTitle("开发人员");
         role.setUserId(user.getId());
@@ -300,7 +309,7 @@ public class UserDaoTest {
 
 
 
-    private User testSave() {
+    private User saveUser() {
         User user = new User();
         user.setName("zp");
         user.setGender(Gender.MAN);
@@ -309,12 +318,10 @@ public class UserDaoTest {
         return user;
     }
 
-    private CustomStatement getStatement() {
-        return CustomStatement.build(User.class);
-    }
+
 
     private User findById(int userId) {
-        return getStatement().findById(userId);
+        return CustomStatement.build(User.class).findById(userId);
     }
 
 }

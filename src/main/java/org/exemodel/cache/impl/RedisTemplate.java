@@ -1,6 +1,5 @@
 package org.exemodel.cache.impl;
 
-import org.apache.commons.collections.map.HashedMap;
 import org.exemodel.builder.CrudSqlGenerator;
 import org.exemodel.cache.ICache;
 import org.exemodel.cache.Promise;
@@ -127,7 +126,7 @@ public class RedisTemplate implements ICache {
         if(ids.length==0){
             return null;
         }
-        Map<K,V> result = new HashedMap(ids.length);
+        Map<K,V> result = new HashMap<>(ids.length);
 
         try (Jedis jedis = getJedis()){
             Pipeline pipeline = jedis.pipelined();

@@ -5,6 +5,7 @@ import org.exemodel.annotation.MethodName;
 import org.exemodel.plugin.Transferable;
 import org.exemodel.util.StringUtil;
 
+import java.beans.Transient;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -16,6 +17,7 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * java bean property(field/get-method/set-method)'s wrapper of java bean
  */
+
 public class FieldAccessor {
     private final static int totalFieldsNum = 1000;
     private Field field;
