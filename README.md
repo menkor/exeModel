@@ -1,7 +1,8 @@
 
 # ExeModel
 
-    微服务成为了趋势，每个服务一般都有多个实例，此时需要考虑到分布式缓存问题了。ExeModel目前实现了以Redis作为缓存层使用，支持分库建设置，提供丰富的数据库SQL操作。
+    微服务成为了趋势，每个服务一般都有多个实例，此时需要考虑到分布式缓存问题了。
+    ExeModel目前实现了以Redis作为缓存层使用，支持分库建设置，提供丰富的数据库SQL操作。
 ## Features ##
 
 * Entity自动映射数据库表，能够直接进行CRUD操作
@@ -9,7 +10,7 @@
 * 支持分布式缓存，开发者不需要感知到缓存
 * 可以自定义缓存字段，将常用字段进行缓存，而不是整表，默认的缓存实现基于redis hmap结构，当有字段更新时，通过lua脚本，直接更新，不需要获取原实体对象实例。存储到Redis时为字节流，有压缩处理，节省内存
 * 支持缓存批量操作，减少与缓存服务器的请求次数
-* 方便与
+* 方便与spring 整合事务
 
 
 ## Quick Start ##
@@ -108,8 +109,7 @@ public class Role extends ExecutableModel{
 ```
 
 
-Write a test client
-
+###SQL操作###
 ```java
 @Test
     public void testSave(){
@@ -406,7 +406,7 @@ Write a test client
 ```
 
 
-#操作缓存
+##开启缓存操作##
 ```java
 @Test
     public void testFindCache() {
