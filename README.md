@@ -569,3 +569,5 @@ public class Role extends ExecutableModel{
         return roleList;
     }
 ```
+##Examples##
+[一般Dao操作](https://github.com/menkor/dfs-proxy/blob/master/src/main/java/com/simu/dao/impl/BucketDao.java)
