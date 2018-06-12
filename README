@@ -1,5 +1,0 @@
-1.支持byte[]等类型，支持多resultSet
-2.transaction优化
-3.ModelMeta代码抽离，sql语句构建可扩展
-4.cache非强制，支持in，logger info
-5.cache支持sharding

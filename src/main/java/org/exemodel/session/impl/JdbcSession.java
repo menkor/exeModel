@@ -25,7 +25,6 @@ import org.exemodel.util.StringUtil;
 @SuppressWarnings("unchecked")
 public class JdbcSession extends AbstractSession {
 
-    public static Log logger = LogFactory.getLog(JdbcSession.class);
     private Connection jdbcConnection;
     private JdbcSessionFactory jdbcSessionFactory;
     private AtomicBoolean activeFlag = new AtomicBoolean(false);

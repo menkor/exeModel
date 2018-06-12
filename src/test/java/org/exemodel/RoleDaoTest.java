@@ -114,15 +114,7 @@ public class RoleDaoTest {
             CustomStatement.build(Role.class).id(role0.getId()).set("userId", 20);
             role0 = CustomStatement.build(Role.class).findCache(role0.getId());
             session.executeCacheBatch();
-            Assert.assertTrue(role0.getUserId() == 20);
-
-            roleList.get(0).setUserId(20);
-            session.deleteBatch(roleList);
-            Role role = CustomStatement.build(Role.class).findById(ids[0]);
-            Assert.assertTrue(role == null);
-            Role role1 = CustomStatement.build(Role.class).findCache(ids[1], 10);
-            Assert.assertTrue(role1 == null);
-        }
+            Assert.assertTrue(role0.getUserId() == 20);}
     }
 
     @Test

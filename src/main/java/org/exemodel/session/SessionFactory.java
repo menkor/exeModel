@@ -27,6 +27,8 @@ public abstract class SessionFactory {
             }
             return session;
         }
+
+
     };
 
     public Session getThreadScopeSession() {
