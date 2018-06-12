@@ -61,13 +61,6 @@ public class BeanProcessor {
             }
         }else if (value instanceof String && type.isEnum()) {
             value = Enum.valueOf(type.asSubclass(Enum.class), (String) value);
-        }else if(value instanceof Integer && Transferable.class.isAssignableFrom(type)){
-            try {
-                Transferable instance = (Transferable) (type.isEnum()?type.getEnumConstants()[0]:type.newInstance());
-                return instance.from(value);
-            } catch (Exception e) {
-                throw new JdbcRuntimeException(e.getMessage());
-            }
         }
         return value;
     }

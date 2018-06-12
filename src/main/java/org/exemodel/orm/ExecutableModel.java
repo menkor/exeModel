@@ -161,6 +161,7 @@ public abstract class ExecutableModel implements Serializable{
                 if (fromColumnMeta.isId && skipId) {
                     continue;
                 }
+
                 if (toColumnMeta.fieldName.equals(fromColumnMeta.fieldName)){
                     FieldAccessor fromFa = fromColumnMeta.fieldAccessor;
                     Object value = fromFa.getProperty(from);

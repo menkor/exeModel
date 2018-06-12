@@ -50,6 +50,7 @@ public class FieldAccessor {
         return fieldAccessor;
     }
 
+
     @SuppressWarnings("unchecked")
     public FieldAccessor(Class<?> cls, String name) {
         this.name = name;
@@ -139,6 +140,8 @@ public class FieldAccessor {
             throw new RuntimeException(String.format("Can't set type %s %s to field  %s type %s",value.getClass(),value,name,type));
         }
     }
+
+
 
     public void setScalarProperty(Object obj, Object value){
         if(!(value instanceof Number)){

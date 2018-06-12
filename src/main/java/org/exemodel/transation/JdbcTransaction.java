@@ -5,8 +5,6 @@ import org.exemodel.exceptions.JdbcRuntimeException;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-//TODO 缓存一致性问题
-
 public class JdbcTransaction implements Transaction {
     private final JdbcSession jdbcSession;
     private Integer isolationLevel = null;

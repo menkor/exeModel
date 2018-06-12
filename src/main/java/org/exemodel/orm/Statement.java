@@ -374,6 +374,7 @@ public abstract class Statement<T> extends SqlBuilder<T> {
         return (E) fromDb;
     }
 
+
     private String getFindSql(Object id, Object partitionId, ParameterBindings parameterBindings) {
         ModelMeta thisMeta = getModelMeta();
         ModelMeta.ModelColumnMeta partitionColumn = thisMeta.getPartitionColumn();

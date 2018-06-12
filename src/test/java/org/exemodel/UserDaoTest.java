@@ -45,6 +45,7 @@ public class UserDaoTest {
         User _user = getStatement().findById(user.getId());
         Assert.assertTrue(_user.getAge() == 25);
         Assert.assertTrue(_user.getPublicInfo().isAddress());
+        Assert.assertTrue(_user.getGender().equals(Gender.FEMALE));
         Assert.assertFalse(_user.getPublicInfo().isGender());
     }
 
@@ -75,8 +76,8 @@ public class UserDaoTest {
         User user = getStatement().findOneByNativeSql(sql, "zp", 18);
         Assert.assertTrue(user != null);
 
-        UserVO userVO = getStatement().eq("name","zp").selectOne(UserVO.class,"id"," name as username");
-        Assert.assertTrue(userVO!=null);
+        UserVO userVO = getStatement().eq("name", "zp").selectOne(UserVO.class, "id", " name as username");
+        Assert.assertTrue(userVO != null);
     }
 
     @Test
@@ -169,7 +170,7 @@ public class UserDaoTest {
 
         UserAddForm test2 = new UserAddForm();
         user.copyPropertiesTo(test2);
-        Assert.assertFalse(test2.getName().equals("zp") && test2.getAge() == null);
+        Assert.assertTrue(test2.getName().equals("zp") && test2.getAge() == 10);
 
     }
 
@@ -229,6 +230,21 @@ public class UserDaoTest {
 
     }
 
+    @Test
+    public void testCopyProperties() {
+        User user = testSave();
+
+        User user1 = new User();
+        user.copyPropertiesTo(user1);
+
+        Assert.assertTrue(user.toString().equals(user1.toString()));
+
+        UserVO userVO = new UserVO();
+        user.copyPropertiesTo(userVO);
+        Assert.assertTrue(userVO.getId() == user.getId());
+
+    }
+
 
     @Test
     public void testExecuteBatch() {
@@ -255,7 +271,7 @@ public class UserDaoTest {
     }
 
     @Test
-    public void testUnusualType(){
+    public void testUnusualType() {
         String testStr = "ElonMusk";
         BigDecimal money = new BigDecimal("666.66");
         BigInteger no = new BigInteger("1212121212121212121");
@@ -275,7 +291,7 @@ public class UserDaoTest {
     }
 
     @Test
-    public void testInputStream() throws Exception{
+    public void testInputStream() throws Exception {
         InputStream inputStream = UserDaoTest.class.getResourceAsStream("/test.sql");
         User user = new User();
         user.setName("zp");
@@ -285,19 +301,19 @@ public class UserDaoTest {
 
         User _user = findById(user.getId());
         InputStream inputStream1 = _user.getImage();
-        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream1,"utf-8"));
+        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream1, "utf-8"));
         String s;
-        while ( (s = bufferedReader.readLine())!=null){
+        while ((s = bufferedReader.readLine()) != null) {
             System.out.println(s);
         }
     }
 
     @Test
-    public void testMutilResultSetOfProcedure() throws SQLException{
+    public void testMutilResultSetOfProcedure() throws SQLException {
         TestVO testVO = AbstractSession.currentSession()
-                .callProcedure(TestVO.class," call test_mutil_result_set(?)",new ParameterBindings("zp"));
+                .callProcedure(TestVO.class, " call test_mutil_result_set(?)", new ParameterBindings("zp"));
+        Assert.assertTrue(testVO!=null);
     }
-
 
 
     private User testSave() {
