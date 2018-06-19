@@ -1,10 +1,10 @@
 package org.exemodel.session.impl;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.exemodel.exceptions.JdbcRuntimeException;
 import org.exemodel.orm.FieldAccessor;
 import org.exemodel.orm.ModelMeta;
 import org.exemodel.util.StringUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -15,7 +15,7 @@ import java.util.Map;
 
 @SuppressWarnings("unchecked")
 public class BeanProcessor {
-    private static Logger logger = LoggerFactory.getLogger(BeanProcessor.class);
+    private static Log logger = LogFactory.getLog(BeanProcessor.class);
     public <T> T toBean(ResultSet resultSet, Class<? extends T> type) {
         try {
             if(!resultSet.next()){

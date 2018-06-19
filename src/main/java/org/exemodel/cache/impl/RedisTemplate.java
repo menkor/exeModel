@@ -1,5 +1,7 @@
 package org.exemodel.cache.impl;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.exemodel.builder.CrudSqlGenerator;
 import org.exemodel.cache.ICache;
 import org.exemodel.cache.Promise;
@@ -9,8 +11,6 @@ import org.exemodel.orm.FieldAccessor;
 import org.exemodel.orm.ModelMeta;
 import org.exemodel.session.AbstractSession;
 import org.exemodel.util.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import redis.clients.jedis.*;
 
 import java.util.*;
@@ -27,7 +27,7 @@ public class RedisTemplate implements ICache {
 
     public final static String OK = "OK";
     protected static ReentrantLock lockJedis = new ReentrantLock();
-    protected static Logger logger = LoggerFactory.getLogger(RedisTemplate.class);
+    protected static Log logger = LogFactory.getLog(RedisTemplate.class);
     private static JedisPool jedisPool = null;
     private String host = "localhost";
     private int port = 6378;

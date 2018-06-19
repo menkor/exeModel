@@ -1,15 +1,10 @@
 package org.exemodel.component;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.Date;
 
 /**
  * Created by zp on 16/9/8.
  */
 public class Timer {
-    private static final Logger LOG = LoggerFactory.getLogger(Timer.class);
     private Date startTime = new Date();
     private Date endTime = null;
 
@@ -33,7 +28,6 @@ public class Timer {
 
     public void log() {
         if (endTime == null || endTime.before(startTime)) {
-            LOG.info("you need end the timer");
             return;
         }
         System.out.println(String.format("using %dms, start at %s, end at %s", getTime(), startTime.toString(), endTime.toString()));

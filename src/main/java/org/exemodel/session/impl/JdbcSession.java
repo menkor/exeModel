@@ -584,9 +584,11 @@ public class JdbcSession extends AbstractSession {
 
         StringBuilder querySb = new StringBuilder(queryString);
         querySb.append(" LIMIT ? , ?");
-        parameterBindings.addIndexBinding(pagination.getOffset());
-        parameterBindings.addIndexBinding(pagination.getSize());
-        List<T> list = findListByNativeSql(cls, querySb.toString(), parameterBindings);
+        ParameterBindings fetchLimitCol = new ParameterBindings();
+        fetchLimitCol.extend(parameterBindings);
+        fetchLimitCol.addIndexBinding(pagination.getOffset());
+        fetchLimitCol.addIndexBinding(pagination.getSize());
+        List<T> list = findListByNativeSql(cls, querySb.toString(), fetchLimitCol);
 
         if (list.size() < pagination.getSize() && pagination.getPage() == 1) {
             pagination.setTotal(list.size());

@@ -4,15 +4,12 @@ package org.exemodel.transation.spring;
 import org.exemodel.session.Session;
 import org.exemodel.session.SessionFactory;
 import org.exemodel.transation.Transaction;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionException;
 import org.springframework.transaction.support.AbstractPlatformTransactionManager;
 import org.springframework.transaction.support.DefaultTransactionStatus;
 
 public class TransactionManager extends AbstractPlatformTransactionManager {
-    private static final Logger LOG = LoggerFactory.getLogger(TransactionManager.class);
 
     private SessionFactory sessionFactory;
 

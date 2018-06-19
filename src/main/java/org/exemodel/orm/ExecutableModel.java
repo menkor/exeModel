@@ -6,13 +6,13 @@ import org.exemodel.util.BinaryUtil;
 import org.exemodel.util.Function;
 import org.exemodel.util.NumberUtil;
 import org.exemodel.util.ParameterBindings;
-
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
 
 public abstract class ExecutableModel implements Serializable{
+
     private transient boolean valid = true;
     private transient Function function;
     private transient String[] operationFields;

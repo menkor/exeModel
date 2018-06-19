@@ -51,20 +51,12 @@
             <groupId>redis.clients</groupId>
             <artifactId>jedis</artifactId>
             <version>${redis.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>1.7.0</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-context</artifactId>
-            <scope>provided</scope>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+            <version>1.2</version>
             <optional>true</optional>
-            <version>${springframework.version}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework</groupId>
@@ -112,9 +104,7 @@
     <profiles>
         <profile>
             <id>release</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
+
             <distributionManagement>
                 <snapshotRepository>
                     <id>oss</id>
@@ -126,6 +116,25 @@
                 </repository>
             </distributionManagement>
         </profile>
+        <profile>
+            <id>local</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <distributionManagement>
+                <repository>
+                    <id>all</id>
+                    <name>all</name>
+                    <url>http://192.168.1.100:8081/artifactory/all</url>
+                </repository>
+                <snapshotRepository>
+                    <id>snapshots</id>
+                    <name>simu-server-snapshots</name>
+                    <url>http://192.168.1.100:8081/artifactory/all</url>
+                </snapshotRepository>
+            </distributionManagement>
+        </profile>
+
     </profiles>
 
     <build>
