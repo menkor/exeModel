@@ -1,14 +1,11 @@
 package org.exemodel.session.impl;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.exemodel.exceptions.JdbcRuntimeException;
 import org.exemodel.orm.FieldAccessor;
 import org.exemodel.orm.ModelMeta;
-import org.exemodel.plugin.Transferable;
 import org.exemodel.util.StringUtil;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.io.InputStream;
-import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.*;
@@ -18,7 +15,7 @@ import java.util.Map;
 
 @SuppressWarnings("unchecked")
 public class BeanProcessor {
-    private static Log logger = LogFactory.getLog(JdbcSession.class);
+    private static Logger logger = LoggerFactory.getLogger(BeanProcessor.class);
     public <T> T toBean(ResultSet resultSet, Class<? extends T> type) {
         try {
             if(!resultSet.next()){
@@ -27,6 +24,8 @@ public class BeanProcessor {
             return createBean(resultSet,type);
         }catch (SQLException e){
             throw new JdbcRuntimeException(e);
+        }finally {
+            closeResultSet(resultSet);
         }
     }
 
@@ -43,6 +42,8 @@ public class BeanProcessor {
 
         } catch (SQLException e) {
             throw new JdbcRuntimeException(e);
+        }finally {
+            closeResultSet(rs);
         }
     }
 
@@ -162,6 +163,17 @@ public class BeanProcessor {
                 type == Byte.class || type == Boolean.class || type == String.class||
                 type==Timestamp.class||type==SQLXML.class||type==InputStream.class||type==BigDecimal.class||
                 type==byte[].class||type==Byte[].class||type==BigInteger.class||type==Array.class;
+    }
+
+
+    private final void closeResultSet(ResultSet resultSet){
+        if(resultSet!=null){
+            try {
+                resultSet.close();
+            } catch (SQLException e) {
+                logger.error(e.getMessage());
+            }
+        }
     }
 
 
