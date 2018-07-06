@@ -1,6 +1,5 @@
 package org.exemodel.transation.spring;
 
-
 import org.exemodel.session.Session;
 import org.exemodel.session.SessionFactory;
 import org.exemodel.transation.Transaction;
@@ -9,6 +8,9 @@ import org.springframework.transaction.TransactionException;
 import org.springframework.transaction.support.AbstractPlatformTransactionManager;
 import org.springframework.transaction.support.DefaultTransactionStatus;
 
+/**
+ * @author zp [15951818230@163.com]
+ */
 public class TransactionManager extends AbstractPlatformTransactionManager {
 
     private SessionFactory sessionFactory;

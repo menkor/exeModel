@@ -3,7 +3,7 @@ import java.lang.reflect.Field;
 import java.util.*;
 
 /**
- * @author zp
+ * @author zp [15951818230@163.com]
  */
 
 public class BitMapUtil {

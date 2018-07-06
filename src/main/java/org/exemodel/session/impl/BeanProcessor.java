@@ -13,6 +13,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * @author zp [15951818230@163.com]
+ */
 @SuppressWarnings("unchecked")
 public class BeanProcessor {
     private static Log logger = LogFactory.getLog(BeanProcessor.class);

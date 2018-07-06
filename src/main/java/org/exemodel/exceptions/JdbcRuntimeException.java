@@ -1,7 +1,7 @@
 package org.exemodel.exceptions;
 
 /**
- *  on 15/1/26.
+ *  @author zp [15951818230@163.com]
  *  use RuntimeException instead SQLException because we can handle exception by SpringMVC or other framework default,
  *  so the code will be clean (^_-)
  */

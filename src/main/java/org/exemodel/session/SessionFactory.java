@@ -6,7 +6,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 /**
- * Created by zp on 2016/7/18
+ * @author zp [15951818230@163.com]
  */
 public abstract class SessionFactory {
 

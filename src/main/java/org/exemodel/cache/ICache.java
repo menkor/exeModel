@@ -1,16 +1,13 @@
 package org.exemodel.cache;
 
 import org.exemodel.orm.ExecutableModel;
-import org.exemodel.util.BiConsumer;
 import org.exemodel.util.MapTo;
-import redis.clients.jedis.Jedis;
-
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Created by zp on 17/1/12.
+ * @author zp [15951818230@163.com]
  */
 public interface ICache {
     /**
@@ -42,19 +39,21 @@ public interface ICache {
     boolean update(byte[][] argv);
 
     /**
-     *
-     * @param id
-     * @param clazz
-     * @param fields
+     * get a entity from cache
+     * @param id entity id
+     * @param clazz entity class
+     * @param fields fields need to fill
      * @param <T>
-     * @return
+     * @return entity fill with desired fields, other fields value null
      */
     <T> T get(Object id, Class<?> clazz, String... fields);
+
     /**
-     *
-     * @param id
-     * @param clazz
-     * @param promise
+     * get a entity from cache, use for batch get
+     * @param id  entity id
+     * @param clazz entity class
+     * @param promise to fill the entity when endBatch
+     * @param fieldBytes
      * @param fields
      * @param <T>
      * @return
@@ -70,22 +69,10 @@ public interface ICache {
      */
     <K,V> Map<K,V> batchGet(K[] ids, Class<V> clazz, String... fields);
 
+
+
     <S,K,V> Map<K,V> batchGet(Collection<? extends S> source, MapTo<K, S> getKey, Class<V> clazz,
         String... fields);
-
-
-    /**
-     *  fill collection with cache model
-     * @param source  source collection
-     * @param getKey  the function of get key from source element
-     * @param handler fill function
-     * @param vClass  the class of cached model
-     * @param fields  need be filled fields of S
-     * @param <S>  source element
-     * @param <K>  cached model key
-     * @param <V>  cached model
-     */
-    <S, K, V> void fill(Collection<? extends S> source, MapTo<K, S> getKey, BiConsumer<S, V> handler,Class<V> vClass,String... fields);
 
 
     /**
@@ -109,24 +96,17 @@ public interface ICache {
      */
     boolean batchUpdate(List<? extends ExecutableModel> entities);
 
-    /**
-     * is develop stage, this stage will check the valid of arguments,
-     * eg. if you update a cacheable entity  fields not with id, this method will throw exception
-     * @return
-     */
 
     void startBatch();
 
     void endBatch();
 
     boolean executeBatch();
-
     /**
      * each session will hold a private ICache
-     * @return
+     * @return ICache
      */
     ICache clone();
 
-    Jedis getJedis();
 
 }

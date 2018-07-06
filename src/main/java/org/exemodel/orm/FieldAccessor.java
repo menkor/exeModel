@@ -4,8 +4,6 @@ package org.exemodel.orm;
 import org.exemodel.annotation.MethodName;
 import org.exemodel.plugin.Transferable;
 import org.exemodel.util.StringUtil;
-
-import java.beans.Transient;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -15,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
+ * @author zp [15951818230@163.com]
  * java bean property(field/get-method/set-method)'s wrapper of java bean
  */
 
@@ -39,18 +38,6 @@ public class FieldAccessor {
 
     private static final ConcurrentMap<String, FieldAccessor> fieldAccessorCache = new ConcurrentHashMap<>(totalFieldsNum);
 
-    public static FieldAccessor getFieldAccessor(Class<?> cls, String name) {
-        StringBuilder stringBuilder = new StringBuilder(cls.getCanonicalName());
-        stringBuilder.append("@");
-        stringBuilder.append(name);
-        String key = stringBuilder.toString();
-        FieldAccessor fieldAccessor = fieldAccessorCache.get(key);
-        if (fieldAccessor == null) {
-            fieldAccessor = new FieldAccessor(cls,name);
-            fieldAccessorCache.putIfAbsent(key,fieldAccessor);
-        }
-        return fieldAccessor;
-    }
 
 
     @SuppressWarnings("unchecked")

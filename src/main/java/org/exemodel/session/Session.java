@@ -1,18 +1,11 @@
 package org.exemodel.session;
 
-
 import org.exemodel.cache.ICache;
 import org.exemodel.orm.ExecutableModel;
 import org.exemodel.transation.Transaction;
-import org.exemodel.util.MapTo;
 import org.exemodel.util.Pagination;
 import org.exemodel.util.ParameterBindings;
-
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-
 /**
  * A session hold by each Thread, combine rds and cache operation
  * Created by zp on 2016/7/18
@@ -78,13 +71,6 @@ public interface Session extends AutoCloseable{
      */
     boolean update(ExecutableModel entity);
 
-    /**
-     * update the entity to the rds
-     * @param entity
-     * @param fields need update,eg if you just need to update few field,You can use this
-     * @return
-     */
-    boolean update(ExecutableModel entity, String... fields);
 
     /**
      * begin batch, both sql and cache start cache
@@ -196,8 +182,15 @@ public interface Session extends AutoCloseable{
      */
     <T> List<T> findListByNativeSql(Class<? extends T> cls, String queryString, ParameterBindings parameterBindings);
 
-
-    <T> T callProcedure(Class<? extends T> pojoCls, String call, ParameterBindings parameterBindings);
+    /**
+     *  calling storage procedures
+     * @param DO
+     * @param call procedure sql
+     * @param parameterBindings
+     * @param <T>
+     * @return
+     */
+    <T> T callProcedure(Class<? extends T> DO, String call, ParameterBindings parameterBindings);
     /**
      * update db
      * @param sql
@@ -224,12 +217,6 @@ public interface Session extends AutoCloseable{
 
     void executeCacheBatch();
 
-    <K,V> Map<K,V> batchGetFromCache(K[] ids, Class<V> clazz, String... fields);
-
-    <K,V,E> Map<E,V> batchGetFromCache(Collection<? extends K> source, MapTo<E, K> mapTo,
-        Class<V> clazz, String... fields);
-
-    void batchDeleteCache(List<ExecutableModel> models);
 
     boolean execute(String sql);
 

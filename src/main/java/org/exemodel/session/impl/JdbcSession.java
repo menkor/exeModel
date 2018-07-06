@@ -6,9 +6,6 @@ import java.sql.*;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.exemodel.builder.CrudSqlGenerator;
 import org.exemodel.cache.ICache;
 import org.exemodel.exceptions.JdbcRuntimeException;
 import org.exemodel.orm.ExecutableModel;
@@ -28,10 +25,8 @@ public class JdbcSession extends AbstractSession {
     private Connection jdbcConnection;
     private JdbcSessionFactory jdbcSessionFactory;
     private AtomicBoolean activeFlag = new AtomicBoolean(false);
-    private transient boolean isInBatch = false;
-    private transient boolean isInCacheBatch = false;
+    private volatile boolean pmdKnownBroken = false;
     private transient PreparedStatement batchStatement;
-    private static CrudSqlGenerator sqlGenerator = new CrudSqlGenerator();
 
     public JdbcSession(Connection jdbcConnection) {
         this.jdbcConnection = jdbcConnection;
@@ -101,8 +96,7 @@ public class JdbcSession extends AbstractSession {
                 batchStatement.close();
                 batchStatement = null;
             }
-            getCache().endBatch();
-
+            endCacheBatch();
             if (getTransactionNestedLevel() == 0) {
                 activeFlag.set(false);
                 if (jdbcConnection != null) {
@@ -115,12 +109,13 @@ public class JdbcSession extends AbstractSession {
         }
     }
 
+
+
     private void close(PreparedStatement statement) {
         try {
 
             if (getTransactionNestedLevel() == 0 && jdbcConnection != null) {
                 jdbcConnection.close();
-
                 jdbcConnection = null;
             }
             if (statement != null) {
@@ -160,7 +155,7 @@ public class JdbcSession extends AbstractSession {
     @Override
     public boolean save(ExecutableModel entity) {
         final ModelMeta modelMeta = ModelMeta.getModelMeta(entity.getClass());
-        String sql = sqlGenerator.getInsertSql(entity.getClass());
+        String sql = modelMeta.sqlGenerator().getInsertSql();
         if (!isInBatch) {
             PreparedStatement preparedStatement = null;
             try {
@@ -211,9 +206,7 @@ public class JdbcSession extends AbstractSession {
 
     @Override
     public boolean update(final ExecutableModel entity) {
-        if (entity.operateFields() != null) {
-            return update(entity, entity.operateFields());
-        }
+
         final ModelMeta modelMeta = ModelMeta.getModelMeta(entity.getClass());
         boolean isPartition = modelMeta.getPartitionColumn() != null;
         Object partitionId = null;
@@ -225,7 +218,7 @@ public class JdbcSession extends AbstractSession {
             }
         }
         final FieldAccessor idAccessor = modelMeta.getIdAccessor();
-        String sql = sqlGenerator.getUpdateSql(entity.getClass());
+        String sql = modelMeta.sqlGenerator().getUpdateSql();
         if (!isInBatch) {
             PreparedStatement preparedStatement = null;
             try {
@@ -269,7 +262,6 @@ public class JdbcSession extends AbstractSession {
         }
     }
 
-    @Override
     public boolean update(ExecutableModel entity, String... columns) {
         if (entity == null) {
             return false;
@@ -292,7 +284,7 @@ public class JdbcSession extends AbstractSession {
             } else {
                 sb.append(",");
             }
-            FieldAccessor fieldAccessor = FieldAccessor.getFieldAccessor(modelMeta.getModelCls(), column);
+            FieldAccessor fieldAccessor = modelMeta.getFieldAccessor(column);
             Object value = fieldAccessor.getProperty(entity);
             sb.append(StringUtil.underscoreName(column));
             sb.append("=? ");
@@ -333,7 +325,7 @@ public class JdbcSession extends AbstractSession {
                         + modelMeta.getPartitionColumn().columnName);
             }
         }
-        String sql = sqlGenerator.getDeleteSql(entity.getClass());
+        String sql = modelMeta.sqlGenerator().getDeleteSql();
         if (!isInBatch) {
             PreparedStatement preparedStatement = null;
             try {
@@ -376,15 +368,7 @@ public class JdbcSession extends AbstractSession {
         return true;
     }
 
-    @Override
-    public void startBatch() {
-        this.isInBatch = true;
-        ICache cache = getCache();
-        if (cache != null) {
-            this.isInCacheBatch = true;
-            cache.startBatch();
-        }
-    }
+
 
     @Override
     public int[] executeBatch() {
@@ -395,7 +379,7 @@ public class JdbcSession extends AbstractSession {
                     res = batchStatement.executeBatch();
                 }
                 if (isInCacheBatch) {
-                    getCache().executeBatch();
+                    executeCacheBatch();
                 }
                 return res;
             } catch (SQLException e) {
@@ -409,28 +393,7 @@ public class JdbcSession extends AbstractSession {
         }
     }
 
-    @Override
-    public boolean updateBatch(List<? extends ExecutableModel> entities) {
-        if (entities == null || entities.size() == 0) {
-            return true;
-        }
-        this.isInBatch = true;
-        for (ExecutableModel entity : entities) {
-            update(entity);
-        }
-        int[] res = executeBatch();
-        if (res == null) {
-            return false;
-        }
-        int len = res.length;
-        close();
-        ExecutableModel tmp = entities.get(0);
-        ModelMeta modelMeta = ModelMeta.getModelMeta(tmp.getClass());
-        if (modelMeta.isCacheable()) {
-            getCache().batchUpdate(entities);
-        }
-        return len == entities.size();
-    }
+
 
     @Override
     public boolean saveBatch(List<? extends ExecutableModel> entities) {
@@ -485,24 +448,7 @@ public class JdbcSession extends AbstractSession {
 
     }
 
-    @Override
-    public boolean deleteBatch(List<? extends ExecutableModel> entities) {
-        if (entities == null || entities.size() == 0) {
-            return true;
-        }
-        this.isInBatch = true;
-        for (ExecutableModel entity : entities) {
-            delete(entity);
-        }
-        int len = executeBatch().length;
-        close();
-        ExecutableModel tmp = entities.get(0);
-        ModelMeta modelMeta = ModelMeta.getModelMeta(tmp.getClass());
-        if (modelMeta.isCacheable()) {
-            getCache().batchDelete(entities);
-        }
-        return len == entities.size();
-    }
+
 
     /**
      * @param cls         return Type
@@ -517,13 +463,13 @@ public class JdbcSession extends AbstractSession {
         if (partitionColumn != null) {
             boolean invalidPartitionId = NumberUtil.isUndefined(partitionId);
             if (invalidPartitionId) {
-                sql = sqlGenerator.getFindByIdSql(cls);
+                sql = modelMeta.sqlGenerator().getFindByIdSql();
             } else {
-                sql = sqlGenerator.getFindByPartitionIdSql(cls);
+                sql = modelMeta.sqlGenerator().getFindByPartitionIdSql();
                 withPartitionId = true;
             }
         } else {
-            sql = sqlGenerator.getFindByIdSql(cls);
+            sql = modelMeta.sqlGenerator().getFindByIdSql();
         }
         PreparedStatement preparedStatement = null;
         try {
@@ -649,13 +595,13 @@ public class JdbcSession extends AbstractSession {
     }
 
     @Override
-    public <T> T callProcedure(Class<? extends T> pojoCls, String callString, ParameterBindings parameterBindings) {
+    public <T> T callProcedure(Class<? extends T> DO, String callString, ParameterBindings parameterBindings) {
         CallableStatement callableStatement = null;
         try {
             callableStatement = getConnection().prepareCall(callString);
             fillStatement(callableStatement, parameterBindings.getIndexParametersArray());
-            T result = pojoCls.newInstance();
-            Field[] fields = pojoCls.getDeclaredFields();
+            T result = DO.newInstance();
+            Field[] fields = DO.getDeclaredFields();
             int i = 0;
             boolean hasRs = callableStatement.execute();
             while (hasRs) {
@@ -685,9 +631,9 @@ public class JdbcSession extends AbstractSession {
         return executeUpdate(sql, parameterBindings.getIndexParametersArray());
     }
 
-
+    //TODO warning the dangerous cache update
     @Override
-    public int executeUpdate(String sql, Object[] params) {//TODO warning the dangerous cache update
+    public int executeUpdate(String sql, Object[] params) {
         if (!isInBatch) {
             PreparedStatement preparedStatement = null;
             try {
@@ -726,27 +672,7 @@ public class JdbcSession extends AbstractSession {
         }
     }
 
-    @Override
-    public void startCacheBatch() {
-        ICache cache = getCache();
-        if (cache == null) {
-            throw new JdbcRuntimeException("Please config the cache first");
-        }
-        this.isInCacheBatch = true;
-        cache.startBatch();
-    }
 
-    @Override
-    public void executeCacheBatch() {
-        getCache().executeBatch();
-        this.isInCacheBatch = false;
-        getCache().endBatch();
-    }
-
-    @Override
-    public boolean isInCacheBatch() {
-        return this.isInCacheBatch;
-    }
 
 
     @Override
@@ -778,4 +704,67 @@ public class JdbcSession extends AbstractSession {
             idAccessor.setProperty(entity, id);
         }
     }
+
+
+    /**
+     * @param stmt
+     *            PreparedStatement to fill
+     * @param params
+     *            Query replacement parameters; <code>null</code> is a valid
+     *            value to pass in.
+     * @throws SQLException
+     *             if a database access error occurs
+     */
+    private void fillStatement(PreparedStatement stmt, Object... params)
+            throws SQLException {
+
+        // check the parameter count, if we can
+        ParameterMetaData pmd = null;
+        if (!pmdKnownBroken) {
+            try {
+                pmd = stmt.getParameterMetaData();
+                if (pmd == null) { // can be returned by implementations that don't support the method
+                    pmdKnownBroken = true;
+                } else {
+                    int stmtCount = pmd.getParameterCount();
+                    int paramsCount = params == null ? 0 : params.length;
+                    if (stmtCount != paramsCount) {
+                        throw new SQLException("Wrong number of parameters: expected "
+                                + stmtCount + ", was given " + paramsCount);
+                    }
+                }
+            } catch (SQLFeatureNotSupportedException ex) {
+                pmdKnownBroken = true;
+            }
+        }
+
+        // nothing to do here
+        if (params == null) {
+            return;
+        }
+        for (int i = 0; i < params.length; i++) {
+            if (params[i] != null) {
+                stmt.setObject(i + 1, params[i]);
+            } else {
+                // VARCHAR works with many drivers regardless
+                // of the actual column type. Oddly, NULL and
+                // OTHER don't work with Oracle's drivers.
+                int sqlType = Types.VARCHAR;
+                if (!pmdKnownBroken) {
+                    try {
+                        /*
+                         * It's not possible for pmdKnownBroken to change from
+                         * true to false, (once true, always true) so pmd cannot
+                         * be null here.
+                         */
+                        sqlType = pmd.getParameterType(i + 1);
+                    } catch (SQLException e) {
+                        pmdKnownBroken = true;
+                    }
+                }
+                stmt.setNull(i + 1, sqlType);
+            }
+        }
+    }
+
 }

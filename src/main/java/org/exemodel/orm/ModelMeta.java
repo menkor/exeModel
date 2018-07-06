@@ -3,15 +3,18 @@ package org.exemodel.orm;
 import org.exemodel.annotation.CacheField;
 import org.exemodel.annotation.Cacheable;
 import org.exemodel.annotation.PartitionId;
+import org.exemodel.builder.CrudSqlGenerator;
 import org.exemodel.util.BinaryUtil;
 import org.exemodel.util.StringUtil;
-
 import javax.persistence.Transient;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * @author zp [15951818230@163.com]
+ */
 public class ModelMeta {
     private final static int fieldsNum = 30;
     private final static int cachedClassNum = 200;
@@ -26,6 +29,7 @@ public class ModelMeta {
     private ModelColumnMeta partitionColumn;
     private volatile List<String> cacheColumnList;//{index:fieldName}
     private volatile Map<String, FieldAccessor> accessorMap;
+
     /**
      * column info of orm org.exemodel.entity class, ignore all fieldNameBytes with @javax.sql.Transient
      */
@@ -38,6 +42,7 @@ public class ModelMeta {
         public byte[] cacheOrder;//binaryIndex
         public FieldAccessor fieldAccessor;
     }
+
 
     private static List<String> registeredKeys = new ArrayList<>();
 
@@ -193,9 +198,9 @@ public class ModelMeta {
                     cacheColumnList = new ArrayList<>();
                     for (ModelColumnMeta columnMeta : this.columnMetaList) {
                         if (!columnMeta.isId) {
-                            if(isAllCached){
+                            if (isAllCached) {
                                 cacheColumnList.add(columnMeta.columnName);
-                            }else{
+                            } else {
                                 CacheField cacheField = columnMeta.fieldAccessor.getPropertyAnnotation(CacheField.class);
                                 if (cacheField != null) {
                                     cacheColumnList.add(columnMeta.columnName);
@@ -210,7 +215,7 @@ public class ModelMeta {
                             columnMeta.cacheOrder = BinaryUtil.toBytes(index);
                         }
                     }
-                    this.isAllCached = cacheColumnList.size()==(columnMetaList.size()-1);
+                    this.isAllCached = cacheColumnList.size() == (columnMetaList.size() - 1);
                 }
             }
         }
@@ -268,24 +273,36 @@ public class ModelMeta {
                         accessorMap.put(columnMeta.columnName, columnMeta.fieldAccessor);
                     }
                 }
-
             }
         }
         return accessorMap;
     }
 
-    public boolean existColumn(String column){
+    public boolean existColumn(String column) {
         for (ModelColumnMeta columnMeta : columnMetaList) {
-            if(columnMeta.columnName.equals(column)){
+            if (columnMeta.columnName.equals(column)) {
                 return true;
             }
         }
         return false;
     }
 
-    public boolean isAllCached(){
+    public boolean isAllCached() {
         return isAllCached;
     }
 
 
+    public FieldAccessor getFieldAccessor(String columnName) {
+        getAccessorMap();
+        return accessorMap.get(StringUtil.underscoreName(columnName));
+    }
+
+    private CrudSqlGenerator sqlGenerator;
+
+    public CrudSqlGenerator sqlGenerator() {
+        if(sqlGenerator == null){
+            sqlGenerator = new CrudSqlGenerator(this);
+        }
+        return sqlGenerator;
+    }
 }

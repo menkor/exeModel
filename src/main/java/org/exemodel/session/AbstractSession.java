@@ -1,22 +1,25 @@
 package org.exemodel.session;
 
 import org.exemodel.cache.ICache;
+import org.exemodel.exceptions.JdbcRuntimeException;
 import org.exemodel.orm.ExecutableModel;
-import org.exemodel.orm.FieldAccessor;
 import org.exemodel.orm.ModelMeta;
 import org.exemodel.session.impl.BeanProcessor;
-import org.exemodel.util.BinaryUtil;
-import org.exemodel.util.MapTo;
-
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+/**
+ * @author zp [15951818230@163.com]
+ */
 @SuppressWarnings("unchecked")
 public abstract class AbstractSession implements Session {
+    protected transient boolean isInBatch = false;
+    protected transient boolean isInCacheBatch = false;
     protected final Queue<Object> txStack = new ConcurrentLinkedQueue<Object>();
     private ICache cache;
     public static BeanProcessor beanProcessor = new BeanProcessor();
+
 
 
     @Override
@@ -51,10 +54,6 @@ public abstract class AbstractSession implements Session {
         getTransaction().commit();
     }
 
-    @Override
-    public int[] executeBatch() {
-        return new int[0];
-    }
 
 
     @Override
@@ -108,6 +107,16 @@ public abstract class AbstractSession implements Session {
     }
 
     @Override
+    public void startBatch() {
+        this.isInBatch = true;
+        ICache cache = getCache();
+        if (cache != null) {
+            this.isInCacheBatch = true;
+            cache.startBatch();
+        }
+    }
+
+    @Override
     public ICache getCache(){
         if(cache==null){
             ICache iCache = defaultSessionFactory.getCache();
@@ -120,87 +129,77 @@ public abstract class AbstractSession implements Session {
     }
 
     @Override
-    public <K, V> Map<K, V> batchGetFromCache(K[] ids, Class<V> clazz, String... fields) {
-        return getCache().batchGet(ids,clazz,fields);
+    public void startCacheBatch() {
+        ICache cache = getCache();
+        if (cache == null) {
+            throw new JdbcRuntimeException("Please config the cache first");
+        }
+        this.isInCacheBatch = true;
+        cache.startBatch();
     }
 
     @Override
-    public <K, V, E> Map<E, V> batchGetFromCache(Collection<? extends K> source, MapTo<E, K> mapTo, Class<V> clazz, String... fields) {
-        return getCache().batchGet(source,mapTo,clazz,fields);
+    public void executeCacheBatch() {
+        getCache().executeBatch();
+        this.isInCacheBatch = false;
+        endCacheBatch();
+    }
+
+
+    protected void endCacheBatch(){
+        ICache cache = getCache();
+        if(cache!=null){
+            this.isInCacheBatch = false;
+            cache.endBatch();
+        }
+    }
+
+
+    @Override
+    public boolean isInCacheBatch() {
+        return this.isInCacheBatch;
     }
 
     @Override
-    public void batchDeleteCache(List<ExecutableModel> models) {
-        getCache().batchDelete(models);
+    public boolean updateBatch(List<? extends ExecutableModel> entities) {
+        if (entities == null || entities.size() == 0) {
+            return true;
+        }
+        this.isInBatch = true;
+        for (ExecutableModel entity : entities) {
+            update(entity);
+        }
+        int[] res = executeBatch();
+        if (res == null) {
+            return false;
+        }
+        int len = res.length;
+        close();
+        ExecutableModel tmp = entities.get(0);
+        ModelMeta modelMeta = ModelMeta.getModelMeta(tmp.getClass());
+        if (modelMeta.isCacheable()) {
+            getCache().batchUpdate(entities);
+        }
+        return len == entities.size();
     }
 
-
-    private volatile boolean pmdKnownBroken = false;
-
-    /**
-     * @param stmt
-     *            PreparedStatement to fill
-     * @param params
-     *            Query replacement parameters; <code>null</code> is a valid
-     *            value to pass in.
-     * @throws SQLException
-     *             if a database access error occurs
-     */
-    protected void fillStatement(PreparedStatement stmt, Object... params)
-            throws SQLException {
-
-        // check the parameter count, if we can
-        ParameterMetaData pmd = null;
-        if (!pmdKnownBroken) {
-            try {
-                pmd = stmt.getParameterMetaData();
-                if (pmd == null) { // can be returned by implementations that don't support the method
-                    pmdKnownBroken = true;
-                } else {
-                    int stmtCount = pmd.getParameterCount();
-                    int paramsCount = params == null ? 0 : params.length;
-
-                    if (stmtCount != paramsCount) {
-                        throw new SQLException("Wrong number of parameters: expected "
-                                + stmtCount + ", was given " + paramsCount);
-                    }
-                }
-            } catch (SQLFeatureNotSupportedException ex) {
-                pmdKnownBroken = true;
-            }
+    @Override
+    public boolean deleteBatch(List<? extends ExecutableModel> entities) {
+        if (entities == null || entities.size() == 0) {
+            return true;
         }
-
-        // nothing to do here
-        if (params == null) {
-            return;
+        this.isInBatch = true;
+        for (ExecutableModel entity : entities) {
+            delete(entity);
         }
-
-        for (int i = 0; i < params.length; i++) {
-            if (params[i] != null) {
-                stmt.setObject(i + 1, params[i]);
-            } else {
-                // VARCHAR works with many drivers regardless
-                // of the actual column type. Oddly, NULL and
-                // OTHER don't work with Oracle's drivers.
-                int sqlType = Types.VARCHAR;
-                if (!pmdKnownBroken) {
-                    try {
-                        /*
-                         * It's not possible for pmdKnownBroken to change from
-                         * true to false, (once true, always true) so pmd cannot
-                         * be null here.
-                         */
-                        sqlType = pmd.getParameterType(i + 1);
-                    } catch (SQLException e) {
-                        pmdKnownBroken = true;
-                    }
-                }
-                stmt.setNull(i + 1, sqlType);
-            }
+        int len = executeBatch().length;
+        close();
+        ExecutableModel tmp = entities.get(0);
+        ModelMeta modelMeta = ModelMeta.getModelMeta(tmp.getClass());
+        if (modelMeta.isCacheable()) {
+            getCache().batchDelete(entities);
         }
+        return len == entities.size();
     }
-
-
-
 
 }

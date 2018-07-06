@@ -1,7 +1,7 @@
 package org.exemodel.util;
 
 /**
- * Created by zp on 16/9/2.
+ * @author zp [15951818230@163.com]
  */
 public class Pagination {
     private int page = 1;

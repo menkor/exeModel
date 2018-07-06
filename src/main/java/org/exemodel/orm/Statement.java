@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Created by zp on 17/6/16.
+ * @author zp [15951818230@163.com]
  */
 @SuppressWarnings("unchecked")
 public abstract class Statement<T> extends SqlBuilder<T> {

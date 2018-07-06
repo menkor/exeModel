@@ -3,7 +3,7 @@ package org.exemodel.annotation;
 import java.lang.annotation.ElementType;
 
 /**
- * Created by zp on 16/9/9.
+ * @author zp [15951818230@163.com]
  */
 
 @java.lang.annotation.Target({ElementType.FIELD, ElementType.METHOD})

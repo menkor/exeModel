@@ -13,6 +13,7 @@ import javax.persistence.Id;
 @Cacheable(key = "trl")
 public class Role extends ExecutableModel{
     private Integer id;
+    @CacheField
     private int userId;
     private String title;
     private String details;
@@ -29,7 +30,6 @@ public class Role extends ExecutableModel{
 
 
     @PartitionId
-    @CacheField
     public int getUserId() {
         return userId;
     }

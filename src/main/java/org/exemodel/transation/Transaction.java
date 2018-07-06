@@ -19,5 +19,4 @@ public interface Transaction {
 
     public void setIsolationLevel(Integer isolationLevel);
 
-
 }

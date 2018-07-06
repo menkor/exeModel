@@ -1,4 +1,5 @@
 package org.exemodel.orm;
+
 import org.exemodel.cache.ICache;
 import org.exemodel.session.AbstractSession;
 import org.exemodel.session.Session;
@@ -10,39 +11,43 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
-
-public abstract class ExecutableModel implements Serializable{
+/**
+ * @author zp [15951818230@163.com]
+ */
+public abstract class ExecutableModel implements Serializable {
 
     private transient boolean valid = true;
     private transient Function function;
-    private transient String[] operationFields;
+
     public static Session getSession() {
         return AbstractSession.currentSession();
     }
 
-    private ICache getCache(){
+    private ICache getCache() {
         return getSession().getCache();
     }
 
     public boolean save() {
         return save(getSession());
     }
+
     /**
      * if cacheable,cached to redis
+     *
      * @param session current session
      */
-    public boolean save(Session session) {
+    private boolean save(Session session) {
         FieldAccessor idAccessor = ModelMeta.getModelMeta(this.getClass()).getIdAccessor();
         Object tmp = idAccessor.getProperty(this);
-        if(NumberUtil.isUndefined(tmp)){
+        if (NumberUtil.isUndefined(tmp)) {
             Object id = generateId();
-            if(id!=null){
-                idAccessor.setProperty(this,id);
+            if (id != null) {
+                idAccessor.setProperty(this, id);
             }
         }
         boolean res = session.save(this);
         ModelMeta meta = ModelMeta.getModelMeta(this.getClass());
-        if(meta.isCacheable()){
+        if (meta.isCacheable()) {
             getCache().save(this);
         }
         return res;
@@ -52,10 +57,10 @@ public abstract class ExecutableModel implements Serializable{
         return update(getSession());
     }
 
-    public boolean update(Session session) {
+    private boolean update(Session session) {
         boolean res = session.update(this);
         ModelMeta meta = ModelMeta.getModelMeta(this.getClass());
-        if(meta.isCacheable()){
+        if (meta.isCacheable()) {
             getCache().update(this);
         }
         return res;
@@ -64,57 +69,58 @@ public abstract class ExecutableModel implements Serializable{
     public boolean delete() {
         boolean res = delete(getSession());
         ModelMeta meta = ModelMeta.getModelMeta(this.getClass());
-        if(meta.isCacheable()){
+        if (meta.isCacheable()) {
             getCache().delete(this.generateKey());
         }
         return res;
     }
 
-    public boolean delete(Session session) {
+    private boolean delete(Session session) {
         return session.delete(this);
     }
 
 
     public static int executeUpdate(String sql, ParameterBindings parameterBindings) {
-        return getSession().executeUpdate(sql,parameterBindings);
+        return getSession().executeUpdate(sql, parameterBindings);
     }
 
-    public static int executeUpdate(String sql, Object... params){
-        return executeUpdate(sql,new ParameterBindings(params));
+    public static int executeUpdate(String sql, Object... params) {
+        return executeUpdate(sql, new ParameterBindings(params));
     }
 
-    public void copyPropertiesTo(Object to){
-       copyProperties(this,to,false,false);
+    public void copyPropertiesTo(Object to) {
+        copyProperties(this, to, false, false);
     }
 
-    public void copyPropertiesFrom(Object from){
-       copyProperties(from,this,false,false);
+    public void copyPropertiesFrom(Object from) {
+        copyProperties(from, this, false, false);
     }
 
-    public void copyPropertiesToAndSkipNull(Object to){
-        copyProperties(this,to,true,true);
+    public void copyPropertiesToAndSkipNull(Object to) {
+        copyProperties(this, to, true, true);
     }
 
-    public void copyPropertiesFromAndSkipNull(Object from){
-        copyProperties(from,this,true,true);
+    public void copyPropertiesFromAndSkipNull(Object from) {
+        copyProperties(from, this, true, true);
     }
 
-    public Map<byte[],byte[]> generateHashByteMap(){
+    public Map<byte[], byte[]> generateHashByteMap() {
         ModelMeta meta = ModelMeta.getModelMeta(this.getClass());
         HashMap<byte[], byte[]> hashMap = new HashMap<>(meta.getColumnMetaSet().size());
         for (ModelMeta.ModelColumnMeta modelColumnMeta : meta.getColumnMetaSet()) {
-            if(modelColumnMeta.isId||modelColumnMeta.cacheOrder==null){
+            if (modelColumnMeta.isId || modelColumnMeta.cacheOrder == null) {
                 continue;
             }
             FieldAccessor fieldAccessor = modelColumnMeta.fieldAccessor;
             hashMap.put(modelColumnMeta.cacheOrder, BinaryUtil.getBytes(fieldAccessor.getProperty(this)));
         }
-        return hashMap;}
+        return hashMap;
+    }
 
-    public byte[] generateKey(){
+    public byte[] generateKey() {
         ModelMeta meta = ModelMeta.getModelMeta(this.getClass());
-        Object id= BinaryUtil.getBytes(meta.getIdAccessor().getProperty(this));
-        return  BinaryUtil.generateKey(meta.getKey(),BinaryUtil.getBytes(id));
+        Object id = BinaryUtil.getBytes(meta.getIdAccessor().getProperty(this));
+        return BinaryUtil.generateKey(meta.getKey(), BinaryUtil.getBytes(id));
     }
 
     public boolean valid() {
@@ -123,35 +129,29 @@ public abstract class ExecutableModel implements Serializable{
 
     public void setValid(boolean valid) {
         this.valid = valid;
-        if(valid&&function!=null){
+        if (valid && function != null) {
             function.apply(this);
         }
     }
 
-    public void onValid(Function func){
+    public void onValid(Function func) {
         this.function = func;
     }
 
-    public String[] operateFields() {
-        return operationFields;
-    }
 
-    public void load(Object id){
-        ExecutableModel model = getSession().find(this.getClass(),id);
+
+    public void load(Object id) {
+        ExecutableModel model = getSession().find(this.getClass(), id);
         this.copyPropertiesFrom(model);
     }
-    
 
-    public void setOperationFields(String[] operationFields) {
-        this.operationFields = operationFields;
-    }
 
-    public Object generateId(){
+    public Object generateId() {
         return null;
     }
 
-    private  void copyProperties(Object from, Object to, boolean skipNull,boolean skipId) {
-        if(from==null||to==null){
+    private void copyProperties(Object from, Object to, boolean skipNull, boolean skipId) {
+        if (from == null || to == null) {
             return;
         }
         ModelMeta fromMeta = ModelMeta.getModelMeta(from.getClass());
@@ -162,7 +162,7 @@ public abstract class ExecutableModel implements Serializable{
                     continue;
                 }
 
-                if (toColumnMeta.fieldName.equals(fromColumnMeta.fieldName)){
+                if (toColumnMeta.fieldName.equals(fromColumnMeta.fieldName)) {
                     FieldAccessor fromFa = fromColumnMeta.fieldAccessor;
                     Object value = fromFa.getProperty(from);
                     if (skipNull && value == null) {

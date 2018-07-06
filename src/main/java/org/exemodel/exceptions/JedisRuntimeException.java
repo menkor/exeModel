@@ -1,7 +1,7 @@
 package org.exemodel.exceptions;
 
 /**
- * Created by zp on 16/10/9.
+ * @author zp [15951818230@163.com]
  */
 public class JedisRuntimeException extends RuntimeException
 {

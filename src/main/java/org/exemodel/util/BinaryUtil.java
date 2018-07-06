@@ -7,10 +7,9 @@ import java.sql.Timestamp;
 import java.util.Date;
 
 /**
- * Created by zp on 16/9/21.
+ * @author zp [15951818230@163.com]
  */
 public class BinaryUtil {
-
 
     public static final byte[] getBytes(Object o) {
         if (o == null) {

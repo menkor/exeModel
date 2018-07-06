@@ -5,6 +5,9 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * @author zp [15951818230@163.com]
+ */
 public class ParameterBindings {
     private List<Object> indexBindings = new ArrayList<Object>();
 

@@ -1,14 +1,15 @@
 package org.exemodel.annotation;
-
-import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 
 /**
- * Created by zp on 16/9/6.
+ * cache model annotation
+ * @author zp [15951818230@163.com]
  */
 @java.lang.annotation.Target({ElementType.TYPE})
 @java.lang.annotation.Retention(java.lang.annotation.RetentionPolicy.RUNTIME)
 public @interface Cacheable  {
+    // entity short key
     String key() default "";
+    // whether cache all fields
     boolean all() default false;
 }

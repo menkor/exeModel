@@ -1,11 +1,9 @@
 package org.exemodel.cache;
-
-import org.exemodel.session.AbstractSession;
 import org.exemodel.orm.ExecutableModel;
 import org.exemodel.orm.ModelMeta;
 
 /**
- * Created by zp on 17/2/20.
+ * @author zp [15951818230@163.com]
  */
 public abstract class Promise {
     private ExecutableModel result;

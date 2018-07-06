@@ -3,7 +3,7 @@ package org.exemodel.util;
 import java.util.List;
 
 /**
- * Created by zp on 2016/7/19.
+ * @author zp [15951818230@163.com]
  */
 public class Expr {
     private String left;

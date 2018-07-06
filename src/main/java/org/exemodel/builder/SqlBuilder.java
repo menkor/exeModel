@@ -7,7 +7,7 @@ import org.exemodel.util.StringUtil;
 import java.util.List;
 
 /**
- * Created by zp on 17/6/19.
+ * @author zp [15951818230@163.com]
  */
 @SuppressWarnings("unchecked")
 public abstract class SqlBuilder<T> {
@@ -146,6 +146,12 @@ public abstract class SqlBuilder<T> {
         return (T)this;
     }
 
+    public T limit(int offset,int limit){
+        where.append(" LIMIT ?,? ");
+        parameterBindings.addIndexBinding(offset,limit);
+        return (T)this;
+    }
+
     public T asc(String col){
         where.append(" ORDER BY ");
         where.append(StringUtil.underscoreName(col));
@@ -175,7 +181,7 @@ public abstract class SqlBuilder<T> {
     }
 
     public T offset(int offset){
-        where.append(" OFFSET ");
+        where.append(" OFFSET ? ");
         parameterBindings.addIndexBinding(offset);
         return (T)this;
     }

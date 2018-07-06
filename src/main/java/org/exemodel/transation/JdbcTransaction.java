@@ -2,9 +2,12 @@ package org.exemodel.transation;
 
 import org.exemodel.session.impl.JdbcSession;
 import org.exemodel.exceptions.JdbcRuntimeException;
-
 import java.sql.Connection;
 import java.sql.SQLException;
+
+/**
+ * @author zp [15951818230@163.com]
+ */
 public class JdbcTransaction implements Transaction {
     private final JdbcSession jdbcSession;
     private Integer isolationLevel = null;

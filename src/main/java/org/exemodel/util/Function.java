@@ -1,8 +1,8 @@
 package org.exemodel.util;
 
 /**
- * Created by zp on 2016/7/25.
+ * @author zp [15951818230@163.com]
  */
 public interface Function<T> {
-    public void apply(T t);
+    void apply(T t);
 }
