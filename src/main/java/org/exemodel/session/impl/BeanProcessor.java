@@ -169,7 +169,7 @@ public class BeanProcessor {
     }
 
 
-    private final void closeResultSet(ResultSet resultSet){
+    private void closeResultSet(ResultSet resultSet){
         if(resultSet!=null){
             try {
                 resultSet.close();

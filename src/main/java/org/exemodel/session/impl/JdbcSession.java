@@ -6,7 +6,9 @@ import java.sql.*;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.exemodel.cache.ICache;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.exemodel.exceptions.JdbcRuntimeException;
 import org.exemodel.orm.ExecutableModel;
 import org.exemodel.orm.FieldAccessor;
@@ -21,7 +23,7 @@ import org.exemodel.util.StringUtil;
 
 @SuppressWarnings("unchecked")
 public class JdbcSession extends AbstractSession {
-
+    private final static Log logger = LogFactory.getLog(JdbcSession.class);
     private Connection jdbcConnection;
     private JdbcSessionFactory jdbcSessionFactory;
     private AtomicBoolean activeFlag = new AtomicBoolean(false);
@@ -110,7 +112,6 @@ public class JdbcSession extends AbstractSession {
     }
 
 
-
     private void close(PreparedStatement statement) {
         try {
 
@@ -184,6 +185,7 @@ public class JdbcSession extends AbstractSession {
                     }
                 }
             } catch (SQLException e) {
+                logStatement(preparedStatement);
                 throw new JdbcRuntimeException(e);
             } finally {
                 close(preparedStatement);
@@ -197,6 +199,7 @@ public class JdbcSession extends AbstractSession {
                 setStatementAllField(modelMeta, batchStatement, entity, false);
                 batchStatement.addBatch();
             } catch (SQLException e) {
+                logStatement(batchStatement);
                 close();
                 throw new JdbcRuntimeException(e);
             }
@@ -234,6 +237,7 @@ public class JdbcSession extends AbstractSession {
                 boolean res = preparedStatement.executeUpdate() > 0;
                 return res;
             } catch (SQLException e) {
+                logStatement(preparedStatement);
                 throw new JdbcRuntimeException(e);
             } finally {
                 close(preparedStatement);
@@ -256,6 +260,7 @@ public class JdbcSession extends AbstractSession {
                 batchStatement.addBatch();
                 return true;
             } catch (SQLException e) {
+                logStatement(batchStatement);
                 close();
                 throw new JdbcRuntimeException(e);
             }
@@ -303,6 +308,7 @@ public class JdbcSession extends AbstractSession {
             int i = preparedStatement.executeUpdate();
             return i > 0;
         } catch (SQLException e) {
+            logStatement(preparedStatement);
             throw new JdbcRuntimeException(e);
         } finally {
             close(preparedStatement);
@@ -343,6 +349,7 @@ public class JdbcSession extends AbstractSession {
                 preparedStatement.setObject(i, id);
                 return preparedStatement.executeUpdate() > 0;
             } catch (SQLException e) {
+                logStatement(preparedStatement);
                 throw new JdbcRuntimeException(e);
             } finally {
                 close(preparedStatement);
@@ -361,13 +368,13 @@ public class JdbcSession extends AbstractSession {
                 batchStatement.setObject(i, id);
                 batchStatement.addBatch();
             } catch (SQLException e) {
+                logStatement(batchStatement);
                 close();
                 throw new JdbcRuntimeException(e);
             }
         }
         return true;
     }
-
 
 
     @Override
@@ -383,6 +390,7 @@ public class JdbcSession extends AbstractSession {
                 }
                 return res;
             } catch (SQLException e) {
+                logStatement(batchStatement);
                 throw new JdbcRuntimeException(e);
             } finally {
                 close();
@@ -392,7 +400,6 @@ public class JdbcSession extends AbstractSession {
             throw new JdbcRuntimeException("Not in batch");
         }
     }
-
 
 
     @Override
@@ -449,7 +456,6 @@ public class JdbcSession extends AbstractSession {
     }
 
 
-
     /**
      * @param cls         return Type
      * @param partitionId Distributed db partitionId
@@ -482,6 +488,7 @@ public class JdbcSession extends AbstractSession {
             ResultSet resultSet = preparedStatement.executeQuery();
             return beanProcessor.toBean(resultSet, cls);
         } catch (SQLException e) {
+            logStatement(preparedStatement);
             throw new JdbcRuntimeException(e);
         } finally {
             close(preparedStatement);
@@ -500,13 +507,14 @@ public class JdbcSession extends AbstractSession {
 
     @Override
     public <T> List<T> findListByNativeSql(Class<? extends T> cls, String queryString, Object... params) {
-        PreparedStatement statement =null;
+        PreparedStatement statement = null;
         try {
             statement = getJdbcConnection().prepareStatement(queryString);
-            fillStatement(statement,params);
+            fillStatement(statement, params);
             ResultSet resultSet = statement.executeQuery();
             return beanProcessor.toBeanList(resultSet, cls);
         } catch (SQLException e) {
+            logStatement(statement);
             throw new JdbcRuntimeException(e);
         } finally {
             close(statement);
@@ -574,6 +582,7 @@ public class JdbcSession extends AbstractSession {
             ResultSet resultSet = statement.executeQuery();
             return beanProcessor.toBean(resultSet, cls);
         } catch (SQLException e) {
+            logStatement(statement);
             throw new JdbcRuntimeException(e);
         } finally {
             close(statement);
@@ -620,6 +629,7 @@ public class JdbcSession extends AbstractSession {
 
             return result;
         } catch (SQLException | InstantiationException | IllegalAccessException e) {
+            logStatement(callableStatement);
             throw new JdbcRuntimeException(e);
         } finally {
             close(callableStatement);
@@ -647,6 +657,7 @@ public class JdbcSession extends AbstractSession {
                 }
                 return preparedStatement.executeUpdate();
             } catch (SQLException e) {
+                logStatement(preparedStatement);
                 throw new JdbcRuntimeException(e);
             } finally {
                 close(preparedStatement);
@@ -666,13 +677,12 @@ public class JdbcSession extends AbstractSession {
                 }
                 return 1;
             } catch (SQLException e) {
+                logStatement(batchStatement);
                 close();
                 throw new JdbcRuntimeException(e);
             }
         }
     }
-
-
 
 
     @Override
@@ -682,12 +692,12 @@ public class JdbcSession extends AbstractSession {
             preparedStatement = getJdbcConnection().prepareStatement(sql);
             return preparedStatement.execute();
         } catch (SQLException e) {
+            logStatement(preparedStatement);
             throw new JdbcRuntimeException(e);
         } finally {
             close(preparedStatement);
         }
     }
-
 
 
     private void setGeneratedId(FieldAccessor idAccessor, Object entity, Object id) {
@@ -706,14 +716,17 @@ public class JdbcSession extends AbstractSession {
     }
 
 
+    private void logStatement(PreparedStatement statement) {
+        if (statement != null) {
+            logger.error("Current sql:" + statement.toString());
+        }
+    }
+
     /**
-     * @param stmt
-     *            PreparedStatement to fill
-     * @param params
-     *            Query replacement parameters; <code>null</code> is a valid
-     *            value to pass in.
-     * @throws SQLException
-     *             if a database access error occurs
+     * @param stmt   PreparedStatement to fill
+     * @param params Query replacement parameters; <code>null</code> is a valid
+     *               value to pass in.
+     * @throws SQLException if a database access error occurs
      */
     private void fillStatement(PreparedStatement stmt, Object... params)
             throws SQLException {

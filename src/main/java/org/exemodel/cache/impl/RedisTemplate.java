@@ -18,7 +18,6 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * @author zp [15951818230@163.com]
  */
-//TODO jedis用超类JedisCommands 来控制,curtPipeline 用超类 PipelineBase, 通过引入不同的实现来操作,支持ShardedJedis
 @SuppressWarnings(value = "unchecked")
 public class RedisTemplate implements ICache {
     private final static Log logger = LogFactory.getLog(RedisTemplate.class);
@@ -385,33 +384,6 @@ public class RedisTemplate implements ICache {
         }
     }
 
-    public byte[][] generateZipMap(Object entity) {
-        ModelMeta meta = ModelMeta.getModelMeta(entity.getClass());
-        byte[][] result = new byte[(meta.getColumnMetaSet().size() - 1) * 2 + 1][];//因为id不需要存入zipmap
-        byte[] key = meta.getKey();
-        int i = 1;
-
-        for (ModelMeta.ModelColumnMeta modelColumnMeta : meta.getColumnMetaSet()) {
-            if (modelColumnMeta.isId) {
-                Object id = BinaryUtil.getBytes(meta.getIdAccessor().getProperty(entity));
-                byte[] idByte = BinaryUtil.getBytes(id);
-                result[0] = new byte[idByte.length + key.length];
-                for (int j = 0; j < result[0].length; j++) {
-                    if (j < key.length) {
-                        result[0][j] = key[j];
-                    } else {
-                        result[0][j] = idByte[j - key.length];
-                    }
-                }
-                continue;
-            }
-            result[i++] = modelColumnMeta.cacheOrder;
-            FieldAccessor fieldAccessor = modelColumnMeta.fieldAccessor;
-            Object value = fieldAccessor.getProperty(entity);
-            result[i++] = BinaryUtil.getBytes(value);
-        }
-        return result;
-    }
 
 
     @Override

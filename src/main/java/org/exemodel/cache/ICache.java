@@ -2,6 +2,8 @@ package org.exemodel.cache;
 
 import org.exemodel.orm.ExecutableModel;
 import org.exemodel.util.MapTo;
+import redis.clients.jedis.Jedis;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -107,6 +109,5 @@ public interface ICache {
      * @return ICache
      */
     ICache clone();
-
 
 }
