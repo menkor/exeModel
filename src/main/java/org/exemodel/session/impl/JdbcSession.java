@@ -760,7 +760,7 @@ public class JdbcSession extends AbstractSession {
                 stmt.setObject(i + 1, params[i]);
             } else {
                 // VARCHAR works with many drivers regardless
-                // of the actual column type. Oddly, NULL and
+                // of the actual column clazz. Oddly, NULL and
                 // OTHER don't work with Oracle's drivers.
                 int sqlType = Types.VARCHAR;
                 if (!pmdKnownBroken) {

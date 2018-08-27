@@ -149,7 +149,8 @@ public abstract class SqlBuilder<T> {
 
     public T limit(int offset, int limit) {
         where.append(" LIMIT ?,? ");
-        parameterBindings.addIndexBinding(offset, limit);
+        parameterBindings.addIndexBinding(offset);
+        parameterBindings.addIndexBinding(limit);
         return (T) this;
     }
 

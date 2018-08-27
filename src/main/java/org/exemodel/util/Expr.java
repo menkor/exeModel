@@ -12,7 +12,9 @@ public class Expr {
     private ParameterBindings parameterBindings;
     private String sql=null;
 
-    public Expr(){};
+    public Expr(){
+
+    }
 
     public Expr(String left,String op,Object right){
         this.left =left;
@@ -21,7 +23,7 @@ public class Expr {
         this.parameterBindings = new ParameterBindings(right);
     }
     public Expr(String sql,ParameterBindings parameterBindings){
-        this.sql =sql;
+        this.sql = sql;
         this.parameterBindings = parameterBindings;
     }
 

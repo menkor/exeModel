@@ -9,6 +9,7 @@ import org.exemodel.builder.SqlBuilder;
 import org.exemodel.util.*;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -16,7 +17,7 @@ import java.util.Map;
  * @author zp [15951818230@163.com]
  */
 @SuppressWarnings("unchecked")
-public abstract class Statement<T> extends SqlBuilder<T> {
+public class Statement<T> extends SqlBuilder<T> {
 
     protected Class<?> modelClass;
     protected volatile ModelMeta modelMeta;
@@ -111,11 +112,13 @@ public abstract class Statement<T> extends SqlBuilder<T> {
     }
 
     public <E> List<E> selectList(Class<?> modelClass, String... fields) {
+        fields = injectId(fields, getModelMeta().getIdName());
         String sql = findList(getModelMeta().getTableName(), fields);
         return (List<E>) getSession().findListByNativeSql(modelClass, sql, parameterBindings);
     }
 
     public <E> E selectOne(final Class modelClass, String... fields) {
+        fields = injectId(fields, getModelMeta().getIdName());
         ModelMeta modelMeta = getModelMeta();
         ModelMeta resultModelMetal = ModelMeta.getModelMeta(modelClass);
         if (isCacheable() && key != null && fields.length != 0) {
@@ -145,7 +148,7 @@ public abstract class Statement<T> extends SqlBuilder<T> {
                 if (cached != null) {
                     return (E) cached;
                 }
-                ExecutableModel fromDb = (ExecutableModel) getSession().findOneByNativeSql(this.modelClass, sql,sqlParams);
+                ExecutableModel fromDb = (ExecutableModel) getSession().findOneByNativeSql(this.modelClass, sql, sqlParams);
                 if (fromDb != null) {//save the whole cached org.exemodel.entity
                     FieldAccessor fieldAccessor = modelMeta.getIdAccessor();
                     fieldAccessor.setProperty(fromDb, key);
@@ -162,8 +165,9 @@ public abstract class Statement<T> extends SqlBuilder<T> {
                 }
             }
         }
-        return (E)getSession().findOneByNativeSql(modelClass, findOne(modelMeta.getTableName(), fields),
-                parameterBindings);    }
+        return (E) getSession().findOneByNativeSql(modelClass, findOne(modelMeta.getTableName(), fields),
+                parameterBindings);
+    }
 
     /**
      * 以下几种set方法用于更新时
@@ -318,14 +322,16 @@ public abstract class Statement<T> extends SqlBuilder<T> {
     public boolean exists() {
         String sql = " SELECT 1 FROM " + getModelMeta().getTableName() + where + " limit 1";
         return
-                AbstractSession.currentSession().findOneByNativeSql(Integer.class, sql, parameterBindings)
-                        != null;
+                AbstractSession.currentSession()
+                        .findOneByNativeSql(Integer.class, sql, parameterBindings) != null;
     }
 
+    @Deprecated
     public <E> E findCache(Object id) {
         return this.findCache(id, null);
     }
 
+    @Deprecated
     public <E> E findCache(Object id, Object partitionId) {
         ModelMeta modelMeta = getModelMeta();
         int cachedLength = modelMeta.getCacheColumnList().size();
@@ -444,8 +450,8 @@ public abstract class Statement<T> extends SqlBuilder<T> {
         return " SELECT " + StringUtil.joinParams(",", fields) + " FROM " + table + where;
     }
 
-    private boolean isEmpty(String[] fields){
-        return fields==null||fields.length==0;
+    private boolean isEmpty(String[] fields) {
+        return fields == null || fields.length == 0;
     }
 
     private String[] generateFields(Class targetClass) {
@@ -457,5 +463,19 @@ public abstract class Statement<T> extends SqlBuilder<T> {
             }
         }
         return res.toArray(new String[res.size()]);
+    }
+
+    private String[] injectId(String[] fields, String idName) {
+        if (fields == null || fields.length == 0) {
+            return new String[]{"*"};
+        }
+        for (String t : fields) {
+            if (t.equals(idName)) {
+                return fields;
+            }
+        }
+        String[] res = Arrays.copyOf(fields, fields.length + 1);
+        res[fields.length] = idName;
+        return res;
     }
 }

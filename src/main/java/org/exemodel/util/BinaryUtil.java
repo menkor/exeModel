@@ -59,7 +59,7 @@ public class BinaryUtil {
         } else if( o instanceof BigInteger){
             return toBytes((BigInteger) o);
         } else {
-            throw new RuntimeException("Error: The parameter " + o + " is not basic type!");
+            throw new RuntimeException("Error: The parameter " + o + " is not basic clazz!");
         }
     }
 
@@ -113,7 +113,7 @@ public class BinaryUtil {
             return toBigDecimal(bytes);
         }
         else {
-            throw new RuntimeException("Error: The parameter" + clazz + "is not basic type!");
+            throw new RuntimeException("Error: The parameter" + clazz + "is not basic clazz!");
         }
     }
 

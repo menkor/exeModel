@@ -2,6 +2,7 @@ package org.exemodel;
 
 import org.exemodel.component.CustomStatement;
 import org.exemodel.component.InitResource;
+import org.exemodel.component.RoleDao;
 import org.exemodel.component.RoleUpdateForm;
 import org.exemodel.session.AbstractSession;
 import org.exemodel.session.Session;
@@ -9,7 +10,8 @@ import org.exemodel.util.Function;
 import org.exemodel.model.Role;
 import org.exemodel.util.MapTo;
 import org.junit.Assert;
-import org.junit.Test;
+import org.testng.annotations.Test;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -17,25 +19,12 @@ import java.util.Map;
 /**
  * Created by zp on 17/2/16.
  */
-public class RoleDaoTest {
+public class CacheTest {
     static {
         new InitResource();
     }
+    RoleDao roleDao = new RoleDao();
 
-
-    @Test
-    public void testFindCache() {
-        Role role = addRole();
-        Role role1 = CustomStatement.build(Role.class).findCache(role.getId());
-        Assert.assertTrue(role.getUserId() == role1.getUserId());
-
-        Role role2 = CustomStatement.build(Role.class).id(role.getId()).selectOne("userId");
-        Assert.assertTrue(role.getUserId() == role2.getUserId());
-
-        Role role3 = CustomStatement.build(Role.class).findCache(role.getId());
-        Assert.assertTrue(role3.getDetails() == null);//because details not cache
-
-    }
 
     @Test
     public void testSet() {
@@ -43,7 +32,7 @@ public class RoleDaoTest {
         Role role = addRole();
         CustomStatement.build(Role.class).id(role.getId()).set("title", newTitle);
 
-        Role role1 = CustomStatement.build(Role.class).findById(role.getId());
+        Role role1 = roleDao.findById(role.getId());
         Assert.assertTrue(role1.getTitle().equals(newTitle));
     }
 
@@ -52,12 +41,12 @@ public class RoleDaoTest {
         String newTitle = "CTO";
         Role role = addRole();
         role.setTitle(newTitle);
-        role.update();
+        roleDao.update(role);
 
-        Role role1 = CustomStatement.build(Role.class).findCache(role.getId());
+        Role role1 = roleDao.findById(role.getId());
         Assert.assertTrue(role1.getTitle().equals(newTitle));
 
-        role1 = CustomStatement.build(Role.class).id(role.getId()).selectOne("title", "permissions");
+        role1 = roleDao.findById(role.getId(),"title", "permissions");
         Assert.assertTrue(role1.getTitle().equals(newTitle));
 
     }
@@ -112,7 +101,7 @@ public class RoleDaoTest {
             session.startCacheBatch();
             CustomStatement.build(Role.class).id(role0.getId()).set("permissions", "fuck_the_wildest_dog");
             CustomStatement.build(Role.class).id(role0.getId()).set("userId", 20);
-            role0 = CustomStatement.build(Role.class).findCache(role0.getId());
+            role0 = roleDao.findById(role0.getId());
             session.executeCacheBatch();
             Assert.assertTrue(role0.getUserId() == 20);}
     }
@@ -123,7 +112,7 @@ public class RoleDaoTest {
             List<Role> roleList = getList(session);
             session.startCacheBatch();
             for (Role role : roleList) {
-                final Role role1 = CustomStatement.build(Role.class).findCache(role.getId());
+                final Role role1 = roleDao.findById(role.getId(),"permissions");
                 role1.onValid(new Function<Role>() {
                     @Override
                     public void apply(Role o) {
@@ -138,12 +127,6 @@ public class RoleDaoTest {
     }
 
 
-    @Test
-    public void testBatchGet() {
-        Integer[] ids = {1, 2, 1001};
-        Map<Integer, Role> map = AbstractSession.currentSession().getCache().batchGet(ids, Role.class);
-        System.out.println(map);
-    }
 
 
     @Test
@@ -154,7 +137,7 @@ public class RoleDaoTest {
         roleUpdateForm.setNotExists(0);
 
         CustomStatement.build(Role.class).id(role.getId()).setByObject(roleUpdateForm);
-        Role role1 = CustomStatement.build(Role.class).findCache(role.getId());
+        Role role1 = roleDao.findById(role.getId(),"permissions","title");
         Assert.assertTrue(role1.getPermissions().equals("set_by_object"));
         Assert.assertTrue(role1.getTitle().equals(role.getTitle()));
 

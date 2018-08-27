@@ -92,7 +92,7 @@ public class BeanProcessor {
                 }
                 FieldAccessor accessor = accessorMap.get(StringUtil.underscoreName(columnName));
                 if(accessor == null){
-//                    logger.warn(String.format("Result column %s has selected but not be stored to %s",columnName,type));
+//                    logger.warn(String.format("Result column %s has selected but not be stored to %s",columnName,clazz));
                 }else{
                     Class<?> columnType = accessor.getPropertyType();
                     Object value = processColumn(resultSet,i+1,columnType);

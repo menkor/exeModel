@@ -126,7 +126,7 @@ public class FieldAccessor {
         if (this.isCompatibleType(value, type)) {
             set(obj,value);
         }else {
-            throw new RuntimeException(String.format("Can't set type %s %s to field  %s type %s",value.getClass(),value,name,type));
+            throw new RuntimeException(String.format("Can't set clazz %s %s to field  %s clazz %s",value.getClass(),value,name,type));
         }
     }
 
@@ -199,10 +199,10 @@ public class FieldAccessor {
     }
 
     /**
-     * Check whether a value is of the same primitive type as <code>targetType</code>.
+     * Check whether a value is of the same primitive clazz as <code>targetType</code>.
      *
-     * @param targetType The primitive type to target.
-     * @param valueType  The value to match to the primitive type.
+     * @param targetType The primitive clazz to target.
+     * @param valueType  The value to match to the primitive clazz.
      * @return Whether <code>valueType</code> can be coerced (e.g. autoboxed) into <code>targetType</code>.
      */
     private boolean matchesPrimitive(Class<?> targetType, Class<?> valueType) {
