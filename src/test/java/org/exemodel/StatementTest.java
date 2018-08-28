@@ -277,7 +277,7 @@ public class StatementTest {
         user.setName("zp");
         user.setGender(Gender.MAN);
         user.setAge(18);
-        new UserDao().save(user);
+        new UserDao().insert(user);
         return user;
     }
 

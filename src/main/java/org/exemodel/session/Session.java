@@ -58,7 +58,7 @@ public interface Session extends AutoCloseable{
 
 
     /**
-     * save the entity to the rds (relation database)
+     * insert the entity to the rds (relation database)
      * @param entity
      * @return
      */
@@ -90,7 +90,7 @@ public interface Session extends AutoCloseable{
     boolean updateBatch(List<? extends ExecutableModel> entities);
 
     /**
-     * save entities to  rds,and use the rds generate id to save to cache
+     * insert entities to  rds,and use the rds generate id to insert to cache
      * @param entities if shard the database, need partitionId
      */
     boolean saveBatch(List<? extends ExecutableModel> entities);

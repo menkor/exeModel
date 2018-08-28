@@ -1,21 +1,10 @@
 package org.exemodel;
 
 import org.exemodel.component.*;
-import org.exemodel.session.AbstractSession;
-import org.exemodel.session.Session;
-import org.exemodel.exceptions.JdbcRuntimeException;
-import org.exemodel.orm.ExecutableModel;
-import org.exemodel.util.*;
-import org.exemodel.model.Role;
 import org.exemodel.model.User;
 import org.junit.Assert;
 import org.testng.annotations.Test;
 
-import java.io.*;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 
 
@@ -36,7 +25,7 @@ public class UserDaoTest {
         user.setGender(Gender.MAN);
         user.setAge(18);
 
-        userDao.save(user);
+        userDao.insert(user);
 
         User find = userDao.findById(user.getId());
         Assert.assertTrue(user.getName().equals(userDao.findById(user.getId()).getName()));
@@ -67,7 +56,7 @@ public class UserDaoTest {
         user.setName("src/test");
         user.setAge(18);
 
-        userDao.save(user);
+        userDao.insert(user);
         userDao.delete(user);
         User _user = userDao.findById(user.getId());
         Assert.assertTrue(_user == null);
@@ -89,7 +78,7 @@ public class UserDaoTest {
         user.setName("zp");
         user.setGender(Gender.MAN);
         user.setAge(18);
-        userDao.save(user);
+        userDao.insert(user);
         return user;
     }
 

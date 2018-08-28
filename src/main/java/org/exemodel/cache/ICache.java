@@ -13,7 +13,7 @@ import java.util.Map;
  */
 public interface ICache {
     /**
-     * save the entity to cache,need id
+     * insert the entity to cache,need id
      * @param entity
      * @return
      */
@@ -78,7 +78,7 @@ public interface ICache {
 
 
     /**
-     * batch save entities to cache
+     * batch insert entities to cache
      * @param entities mast with id
      * @return
      */

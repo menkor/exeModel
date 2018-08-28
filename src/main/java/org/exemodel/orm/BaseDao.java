@@ -27,16 +27,9 @@ public abstract class BaseDao<T extends ExecutableModel> {
 
     public BaseDao() {
         Type superClass = getClass().getGenericSuperclass();
-        String className = ((ParameterizedType) superClass).getActualTypeArguments()[0]
-                .toString()
-                .split(" ")[1];
-        try {
-            clazz = Class.forName(className);
-            session = AbstractSession.currentSession();
-            modelMeta = ModelMeta.getModelMeta(clazz);
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException(e);
-        }
+        clazz = (Class) ((ParameterizedType) superClass).getActualTypeArguments()[0];
+        session = AbstractSession.currentSession();
+        modelMeta = ModelMeta.getModelMeta(clazz);
     }
 
     public Session getSession() {
@@ -47,7 +40,7 @@ public abstract class BaseDao<T extends ExecutableModel> {
         return session;
     }
 
-    public boolean save(T entity) {
+    public boolean insert(T entity) {
         return session.save(entity);
     }
 
@@ -59,7 +52,7 @@ public abstract class BaseDao<T extends ExecutableModel> {
         return session.update(entity);
     }
 
-    public boolean saveBatch(List<T> entities) {
+    public boolean insertBatch(List<T> entities) {
         return session.saveBatch(entities);
     }
 

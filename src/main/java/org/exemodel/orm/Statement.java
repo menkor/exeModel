@@ -149,7 +149,7 @@ public class Statement<T> extends SqlBuilder<T> {
                     return (E) cached;
                 }
                 ExecutableModel fromDb = (ExecutableModel) getSession().findOneByNativeSql(this.modelClass, sql, sqlParams);
-                if (fromDb != null) {//save the whole cached org.exemodel.entity
+                if (fromDb != null) {//insert the whole cached org.exemodel.entity
                     FieldAccessor fieldAccessor = modelMeta.getIdAccessor();
                     fieldAccessor.setProperty(fromDb, key);
                     getCache().save(fromDb);
