@@ -107,6 +107,12 @@ public class Statement<T> extends SqlBuilder<T> {
         return (List<E>) getSession().findListByNativeSql(this.modelClass, sql, parameterBindings, pagination);
     }
 
+
+    public <E> List<E> selectByPagination(Class<E> modelClass,Pagination pagination, String... fields) {
+        String sql = findList(getModelMeta().getTableName(), fields);
+        return  getSession().findListByNativeSql(modelClass, sql, parameterBindings, pagination);
+    }
+
     public <E> List<E> selectList(String... fields) {
         return this.selectList(this.modelClass, fields);
     }
