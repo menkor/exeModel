@@ -360,7 +360,8 @@ public class RedisTemplate implements ICache {
     @Override
     public boolean update(byte[][] argv) {
         if (curtPipeline != null) {
-            curtPipeline.evalsha(updateLuaSha, 1, argv);
+            curtPipeline.eval(updateLuaScript.getBytes(),1,argv);
+//            curtPipeline.evalsha(updateLuaSha, 1, argv);
             promises.add(null);
             return true;
         }

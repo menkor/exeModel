@@ -108,25 +108,25 @@ public class Statement<T> extends SqlBuilder<T> {
     }
 
 
-    public <E> List<E> selectByPagination(Class<E> modelClass,Pagination pagination, String... fields) {
+    public <E> List<E> selectByPagination(Class<E> modelClass, Pagination pagination, String... fields) {
         String sql = findList(getModelMeta().getTableName(), fields);
-        return  getSession().findListByNativeSql(modelClass, sql, parameterBindings, pagination);
+        return getSession().findListByNativeSql(modelClass, sql, parameterBindings, pagination);
     }
 
     public <E> List<E> selectList(String... fields) {
         return this.selectList(this.modelClass, fields);
     }
 
-    public <E> List<E> selectList(Class<?> modelClass, String... fields) {
-        fields = injectId(fields, getModelMeta().getIdName());
+    public <E> List<E> selectList(Class<?> targetClass, String... fields) {
+        fields = fillColumns(fields, targetClass);
         String sql = findList(getModelMeta().getTableName(), fields);
-        return (List<E>) getSession().findListByNativeSql(modelClass, sql, parameterBindings);
+        return (List<E>) getSession().findListByNativeSql(targetClass, sql, parameterBindings);
     }
 
-    public <E> E selectOne(final Class modelClass, String... fields) {
-        fields = injectId(fields, getModelMeta().getIdName());
+    public <E> E selectOne(final Class targetClass, String... fields) {
+        fields = fillColumns(fields, targetClass);
         ModelMeta modelMeta = getModelMeta();
-        ModelMeta resultModelMetal = ModelMeta.getModelMeta(modelClass);
+        ModelMeta resultModelMetal = ModelMeta.getModelMeta(targetClass);
         if (isCacheable() && key != null && fields.length != 0) {
             byte[][] bytes = modelMeta.convertToBytes(StringUtil.underscoreNames(fields));
             if (bytes != null) {
@@ -134,33 +134,34 @@ public class Statement<T> extends SqlBuilder<T> {
                 final Object[] sqlParams = parameterBindings.getIndexParametersArray();
                 if (getSession().isInCacheBatch()) {
                     try {
-                        ExecutableModel res = (ExecutableModel) modelClass.newInstance();
+                        ExecutableModel res = (ExecutableModel) targetClass.newInstance();
                         Promise promise = new Promise(res) {
                             @Override
                             public Object onFail() {
-                                return getSession().findOneByNativeSql(modelClass, sql, sqlParams);
+                                return getSession().findOneByNativeSql(targetClass, sql, sqlParams);
                             }
                         };
                         promise.setFields(fields);
                         promise.setModelMeta(resultModelMetal);
-                        getCache().get(key, modelClass, promise, bytes, fields);
+                        getCache().get(key, targetClass, promise, bytes, fields);
                         return (E) promise.getResult();
                     } catch (Exception e) {
                         throw new JdbcRuntimeException(e);
                     }
                 }
 
-                Object cached = getCache().get(key, modelClass, null, bytes, fields);
+                Object cached = getCache().get(key, targetClass, null, bytes, fields);
                 if (cached != null) {
                     return (E) cached;
                 }
                 ExecutableModel fromDb = (ExecutableModel) getSession().findOneByNativeSql(this.modelClass, sql, sqlParams);
-                if (fromDb != null) {//insert the whole cached org.exemodel.entity
+                //insert the whole cached org.exemodel.entity
+                if (fromDb != null) {
                     FieldAccessor fieldAccessor = modelMeta.getIdAccessor();
                     fieldAccessor.setProperty(fromDb, key);
                     getCache().save(fromDb);
                     try {
-                        Object res = modelClass.newInstance();
+                        Object res = targetClass.newInstance();
                         fromDb.copyPropertiesTo(res);
                         return (E) res;
                     } catch (Exception e) {
@@ -171,7 +172,7 @@ public class Statement<T> extends SqlBuilder<T> {
                 }
             }
         }
-        return (E) getSession().findOneByNativeSql(modelClass, findOne(modelMeta.getTableName(), fields),
+        return (E) getSession().findOneByNativeSql(targetClass, findOne(modelMeta.getTableName(), fields),
                 parameterBindings);
     }
 
@@ -332,6 +333,7 @@ public class Statement<T> extends SqlBuilder<T> {
                         .findOneByNativeSql(Integer.class, sql, parameterBindings) != null;
     }
 
+
     @Deprecated
     public <E> E findCache(Object id) {
         return this.findCache(id, null);
@@ -471,17 +473,31 @@ public class Statement<T> extends SqlBuilder<T> {
         return res.toArray(new String[res.size()]);
     }
 
-    private String[] injectId(String[] fields, String idName) {
+    private String[] fillColumns(String[] fields, Class targetClass) {
         if (fields == null || fields.length == 0) {
+            if (targetClass != modelClass) {
+                List<String> res = new ArrayList<>();
+                for(ModelMeta.ModelColumnMeta columnMeta: ModelMeta.getModelMeta(targetClass).getColumnMetaSet()){
+                    if(getModelMeta().existColumn(columnMeta.columnName)){
+                        res.add(columnMeta.columnName);
+                    }
+                }
+                return res.toArray(new String[]{});
+            }
             return new String[]{"*"};
         }
-        for (String t : fields) {
-            if (t.equals(idName)) {
-                return fields;
+        if (modelClass == targetClass || ModelMeta.getModelMeta(targetClass).existColumn(getModelMeta().getIdName())) {
+            for (String t : fields) {
+                if (t.equals(getModelMeta().getIdName())) {
+                    return fields;
+                }
             }
+            String[] res = Arrays.copyOf(fields, fields.length + 1);
+            res[fields.length] = getModelMeta().getIdName();
+            return res;
         }
-        String[] res = Arrays.copyOf(fields, fields.length + 1);
-        res[fields.length] = idName;
-        return res;
+
+
+        return fields;
     }
 }

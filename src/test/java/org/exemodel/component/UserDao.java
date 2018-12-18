@@ -14,4 +14,5 @@ public class UserDao extends BaseDao<User> {
     public List<User> findUsers(String name,String... columns){
         return  statement().eq("name",name).selectList(columns);
     }
+
 }

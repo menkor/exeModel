@@ -50,6 +50,10 @@ public class StatementTest {
 
         UserVO userVO = CustomStatement.build(User.class).eq("name","zp").selectOne(UserVO.class,"id"," name as username");
         Assert.assertTrue(userVO!=null);
+
+        userVO = CustomStatement.build(User.class).eq("name","zp").selectOne(UserVO.class);
+        Assert.assertTrue(userVO!=null);
+
     }
 
     @Test
