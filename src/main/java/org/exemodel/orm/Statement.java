@@ -8,10 +8,7 @@ import org.exemodel.session.Session;
 import org.exemodel.builder.SqlBuilder;
 import org.exemodel.util.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author zp [15951818230@163.com]
@@ -107,20 +104,26 @@ public class Statement<T> extends SqlBuilder<T> {
         return (List<E>) getSession().findListByNativeSql(this.modelClass, sql, parameterBindings, pagination);
     }
 
+
+    public <E> List<E> selectByPagination(Class<E> modelClass, Pagination pagination, String... fields) {
+        String sql = findList(getModelMeta().getTableName(), fields);
+        return getSession().findListByNativeSql(modelClass, sql, parameterBindings, pagination);
+    }
+
     public <E> List<E> selectList(String... fields) {
         return this.selectList(this.modelClass, fields);
     }
 
-    public <E> List<E> selectList(Class<?> modelClass, String... fields) {
-        fields = injectId(fields, getModelMeta().getIdName());
+    public <E> List<E> selectList(Class<?> targetClass, String... fields) {
+        fields = fillColumns(fields, targetClass);
         String sql = findList(getModelMeta().getTableName(), fields);
-        return (List<E>) getSession().findListByNativeSql(modelClass, sql, parameterBindings);
+        return (List<E>) getSession().findListByNativeSql(targetClass, sql, parameterBindings);
     }
 
-    public <E> E selectOne(final Class modelClass, String... fields) {
-        fields = injectId(fields, getModelMeta().getIdName());
+    public <E> E selectOne(final Class targetClass, String... fields) {
+        fields = fillColumns(fields, targetClass);
         ModelMeta modelMeta = getModelMeta();
-        ModelMeta resultModelMetal = ModelMeta.getModelMeta(modelClass);
+        ModelMeta resultModelMetal = ModelMeta.getModelMeta(targetClass);
         if (isCacheable() && key != null && fields.length != 0) {
             byte[][] bytes = modelMeta.convertToBytes(StringUtil.underscoreNames(fields));
             if (bytes != null) {
@@ -128,33 +131,34 @@ public class Statement<T> extends SqlBuilder<T> {
                 final Object[] sqlParams = parameterBindings.getIndexParametersArray();
                 if (getSession().isInCacheBatch()) {
                     try {
-                        ExecutableModel res = (ExecutableModel) modelClass.newInstance();
+                        ExecutableModel res = (ExecutableModel) targetClass.newInstance();
                         Promise promise = new Promise(res) {
                             @Override
                             public Object onFail() {
-                                return getSession().findOneByNativeSql(modelClass, sql, sqlParams);
+                                return getSession().findOneByNativeSql(targetClass, sql, sqlParams);
                             }
                         };
                         promise.setFields(fields);
                         promise.setModelMeta(resultModelMetal);
-                        getCache().get(key, modelClass, promise, bytes, fields);
+                        getCache().get(key, targetClass, promise, bytes, fields);
                         return (E) promise.getResult();
                     } catch (Exception e) {
                         throw new JdbcRuntimeException(e);
                     }
                 }
 
-                Object cached = getCache().get(key, modelClass, null, bytes, fields);
+                Object cached = getCache().get(key, targetClass, null, bytes, fields);
                 if (cached != null) {
                     return (E) cached;
                 }
                 ExecutableModel fromDb = (ExecutableModel) getSession().findOneByNativeSql(this.modelClass, sql, sqlParams);
-                if (fromDb != null) {//insert the whole cached org.exemodel.entity
+                //insert the whole cached org.exemodel.entity
+                if (fromDb != null) {
                     FieldAccessor fieldAccessor = modelMeta.getIdAccessor();
                     fieldAccessor.setProperty(fromDb, key);
                     getCache().save(fromDb);
                     try {
-                        Object res = modelClass.newInstance();
+                        Object res = targetClass.newInstance();
                         fromDb.copyPropertiesTo(res);
                         return (E) res;
                     } catch (Exception e) {
@@ -165,26 +169,38 @@ public class Statement<T> extends SqlBuilder<T> {
                 }
             }
         }
-        return (E) getSession().findOneByNativeSql(modelClass, findOne(modelMeta.getTableName(), fields),
+        return (E) getSession().findOneByNativeSql(targetClass, findOne(modelMeta.getTableName(), fields),
                 parameterBindings);
     }
 
     /**
      * 以下几种set方法用于更新时
      *
-     * @param keyValues columnName,value,columnName,value的形式
+     * @param more columnName,value,columnName,value的形式
      * @return 更新的行数
      */
-    public int set(Object... keyValues) {
-        if (keyValues == null || keyValues.length == 0 || keyValues.length % 2 != 0) {
-            throw new JdbcRuntimeException("Error update set");
+    public int set(String column, Object value, Object... more) {
+        Object[] columnNameAndValues ;
+
+        if (more != null && more.length != 0 && more.length % 2 == 0) {
+            columnNameAndValues = new Object[more.length+2];
+            columnNameAndValues[0] = column;
+            columnNameAndValues[1] = value;
+            int index = 2;
+            for (Object o : more) {
+                columnNameAndValues[index++]=o;
+            }
+        }else {
+            columnNameAndValues = new Object[]{column,value};
         }
+
+
         ParameterBindings pb = new ParameterBindings();
         StringBuilder sb = new StringBuilder(" UPDATE ");
         sb.append(getModelMeta().getTableName());
         sb.append(" SET ");
         int i = 0;
-        for (Object o : keyValues) {
+        for (Object o : columnNameAndValues) {
             if (i % 2 == 0) {
                 if (i != 0) {
                     sb.append(",");
@@ -200,7 +216,7 @@ public class Statement<T> extends SqlBuilder<T> {
         ParameterBindings all = pb.addAll(parameterBindings);
         int res = getSession().executeUpdate(sb.toString(), all);
         if (isCacheable() && res > 0) {
-            updateCache(keyValues);
+            updateCache(columnNameAndValues);
         }
         return res;
     }
@@ -291,7 +307,13 @@ public class Statement<T> extends SqlBuilder<T> {
         String sql = " UPDATE " + getModelMeta().getTableName() + " SET " + setSql + where;
         ParameterBindings all;
         if (setParams == null) {
-            setParams = new ParameterBindings();
+            if (setSql.contains("=")) {
+                setParams = new ParameterBindings();
+            } else {
+                Map<String, Object> map = new HashMap<>();
+                map.put(setSql, null);
+                return set(map);
+            }
         }
         all = setParams.addAll(parameterBindings);
         return getSession().executeUpdate(sql, all);
@@ -325,6 +347,7 @@ public class Statement<T> extends SqlBuilder<T> {
                 AbstractSession.currentSession()
                         .findOneByNativeSql(Integer.class, sql, parameterBindings) != null;
     }
+
 
     @Deprecated
     public <E> E findCache(Object id) {
@@ -396,7 +419,7 @@ public class Statement<T> extends SqlBuilder<T> {
             parameterBindings.addIndexBinding(partitionId);
         }
         sb.append(idColumn.columnName);
-        sb.append(" = ? limit 1");
+        sb.append(" = ? ");
         parameterBindings.addIndexBinding(id);
         return sb.toString();
     }
@@ -442,8 +465,8 @@ public class Statement<T> extends SqlBuilder<T> {
         }
     }
 
-    private String findOne(String table, String[] fields) {
-        return " SELECT " + StringUtil.joinParams(",", fields) + " FROM " + table + where + " limit 1";
+    protected String findOne(String table, String[] fields) {
+        return " SELECT " + StringUtil.joinParams(",", fields) + " FROM " + table + where;
     }
 
     private String findList(String table, String[] fields) {
@@ -465,17 +488,31 @@ public class Statement<T> extends SqlBuilder<T> {
         return res.toArray(new String[res.size()]);
     }
 
-    private String[] injectId(String[] fields, String idName) {
+    private String[] fillColumns(String[] fields, Class targetClass) {
         if (fields == null || fields.length == 0) {
+            if (targetClass != modelClass) {
+                List<String> res = new ArrayList<>();
+                for (ModelMeta.ModelColumnMeta columnMeta : ModelMeta.getModelMeta(targetClass).getColumnMetaSet()) {
+                    if (getModelMeta().existColumn(columnMeta.columnName)) {
+                        res.add(columnMeta.columnName);
+                    }
+                }
+                return res.toArray(new String[]{});
+            }
             return new String[]{"*"};
         }
-        for (String t : fields) {
-            if (t.equals(idName)) {
-                return fields;
+        if (modelClass == targetClass || ModelMeta.getModelMeta(targetClass).existColumn(getModelMeta().getIdName())) {
+            for (String t : fields) {
+                if (t.equals(getModelMeta().getIdName())) {
+                    return fields;
+                }
             }
+            String[] res = Arrays.copyOf(fields, fields.length + 1);
+            res[fields.length] = getModelMeta().getIdName();
+            return res;
         }
-        String[] res = Arrays.copyOf(fields, fields.length + 1);
-        res[fields.length] = idName;
-        return res;
+
+
+        return fields;
     }
 }

@@ -1,8 +1,13 @@
 package org.exemodel.builder;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.commons.pool2.ObjectPool;
+import org.exemodel.session.impl.JdbcSession;
 import org.exemodel.util.Expr;
 import org.exemodel.util.ParameterBindings;
 import org.exemodel.util.StringUtil;
+import org.exemodel.util.Supplier;
 
 import java.util.Collection;
 import java.util.List;
@@ -12,6 +17,7 @@ import java.util.List;
  */
 @SuppressWarnings("unchecked")
 public abstract class SqlBuilder<T> {
+    private final static Log logger = LogFactory.getLog(SqlBuilder.class);
     protected ParameterBindings parameterBindings = new ParameterBindings();
     protected StringBuilder where = new StringBuilder(" WHERE (1=1)");
 
@@ -25,6 +31,31 @@ public abstract class SqlBuilder<T> {
     }
 
     public T andWhenNotNull(String column, String operation, Object value) {
+        if (value == null) {
+            return (T) this;
+        }
+        return and(column, operation, value);
+    }
+
+    public T andThen(boolean predict,String column, String operation,Object value) {
+        if (!predict) {
+            return (T) this;
+        }
+        return and(column, operation, value);
+    }
+
+
+
+    /**
+     * and when supplier.get not null,ignore if null
+     *
+     * @param column
+     * @param operation
+     * @param supplier
+     * @return
+     */
+    public T andWhenNotNull(String column, String operation, Supplier supplier) {
+        Object value = supplier.get();
         if (value == null) {
             return (T) this;
         }
@@ -91,6 +122,15 @@ public abstract class SqlBuilder<T> {
         return and(column, ">=", value);
     }
 
+
+    public T between(String column, Object from, Object to) {
+        where.append(" AND (");
+        where.append(column);
+        where.append(" BETWEEN ? AND ? )");
+        parameterBindings.addIndexBinding(from).addIndexBinding(to);
+        return (T) this;
+    }
+
     /**
      * column is null
      *
@@ -137,7 +177,12 @@ public abstract class SqlBuilder<T> {
         return inSqlGenerate(StringUtil.underscoreName(column), values, " IN ");
     }
 
+
+
     public T notIn(String column, Object[] values) {
+        if (values == null || values.length == 0) {
+            return (T) this;
+        }
         return inSqlGenerate(StringUtil.underscoreName(column), values, " NOT IN ");
     }
 
@@ -202,12 +247,12 @@ public abstract class SqlBuilder<T> {
         }
         int i = 0;
         for (Expr expr : exprArray) {
-            if(expr!=null){
+            if (expr != null) {
                 break;
             }
             i++;
         }
-        if(i==exprArray.length){
+        if (i == exprArray.length) {
             return (T) this;
         }
 
@@ -241,10 +286,7 @@ public abstract class SqlBuilder<T> {
     }
 
     private T inSqlGenerate(String column, Collection list, String op) {
-        if (list == null || list.size() == 0) {
-            where.append(" AND 0 = 1 ");
-            return (T) this;
-        }
+
         Object[] values = new Object[list.size()];
         int i = 0;
         for (Object o : list) {

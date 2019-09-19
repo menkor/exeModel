@@ -112,7 +112,7 @@ public class CrudSqlGenerator {
             generatePartitionCondition(modelMeta, sql);
         }
         sql.append(modelMeta.getIdColumnMeta().columnName);
-        sql.append("=? limit 1");
+        sql.append("=? ");
         return sql.toString();
     }
 

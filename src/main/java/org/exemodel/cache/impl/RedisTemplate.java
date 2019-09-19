@@ -32,7 +32,6 @@ public class RedisTemplate implements ICache {
     private int database = 0;
     private boolean ssl = false;
     private String password = null;
-    private static byte[] updateLuaSha;
     private Pipeline curtPipeline;
     private Jedis curJedis;
     private List<Promise> promises = new ArrayList<>();
@@ -53,9 +52,6 @@ public class RedisTemplate implements ICache {
 
         this.password = password;
         jedisPool = new JedisPool(jedisPoolConfig, host, port, timeout, password, database, ssl);
-        try (Jedis jedis = getJedis()) {
-            updateLuaSha = jedis.scriptLoad(updateLua);
-        }
     }
 
 
@@ -360,13 +356,12 @@ public class RedisTemplate implements ICache {
     @Override
     public boolean update(byte[][] argv) {
         if (curtPipeline != null) {
-            curtPipeline.evalsha(updateLuaSha, 1, argv);
+            curtPipeline.eval(updateLua,1,argv);
             promises.add(null);
             return true;
         }
         try (Jedis jedis = getJedis()) {
-            Object result = jedis.evalsha(updateLuaSha, 1, argv);
-
+            Object result = jedis.eval(updateLua, 1, argv);
             return result != null;
         }
     }
@@ -377,7 +372,7 @@ public class RedisTemplate implements ICache {
         try (Jedis jedis = getJedis()) {
             Pipeline pipeline = jedis.pipelined();
             for (ExecutableModel model : models) {
-                pipeline.evalsha(updateLuaSha, 1, generateUpdateLuaAGRV(model));
+                pipeline.eval(updateLua, 1, generateUpdateLuaAGRV(model));
             }
             pipeline.sync();
             return true;

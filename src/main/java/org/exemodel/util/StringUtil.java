@@ -99,7 +99,7 @@ public class StringUtil {
         if(name ==null) {
             return null;
         }
-        int length =  name.length()*3/2;
+        int length =  name.length()*2;
         char[] rs = new char[length];
         int i=1;
         char tmp;

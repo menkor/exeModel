@@ -50,6 +50,10 @@ public class StatementTest {
 
         UserVO userVO = CustomStatement.build(User.class).eq("name","zp").selectOne(UserVO.class,"id"," name as username");
         Assert.assertTrue(userVO!=null);
+
+        userVO = CustomStatement.build(User.class).eq("name","zp").selectOne(UserVO.class);
+        Assert.assertTrue(userVO!=null);
+
     }
 
     @Test
@@ -266,7 +270,7 @@ public class StatementTest {
     }
 
     @Test
-    public void testMutilResultSetOfProcedure() throws SQLException {
+    public void testMutilResultSetOfProcedure()  {
         TestVO testVO = AbstractSession.currentSession()
                 .callProcedure(TestVO.class," call test_mutil_result_set(?)",new ParameterBindings("zp"));
     }

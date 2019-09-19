@@ -6,10 +6,12 @@ import org.exemodel.component.RoleDao;
 import org.exemodel.component.RoleUpdateForm;
 import org.exemodel.session.AbstractSession;
 import org.exemodel.session.Session;
+import org.exemodel.session.impl.JdbcSession;
 import org.exemodel.util.Function;
 import org.exemodel.model.Role;
 import org.exemodel.util.MapTo;
 import org.junit.Assert;
+import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.testng.annotations.Test;
 
 import java.util.ArrayList;
@@ -142,6 +144,8 @@ public class CacheTest {
         Assert.assertTrue(role1.getTitle().equals(role.getTitle()));
 
     }
+
+
 
 
     private Role addRole() {

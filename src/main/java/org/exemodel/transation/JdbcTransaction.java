@@ -19,6 +19,7 @@ public class JdbcTransaction implements Transaction {
 
     @Override
     public void begin() {
+
         jdbcSession.setAutoCommit(false);
         try {
             if(this.isolationLevel !=null){
