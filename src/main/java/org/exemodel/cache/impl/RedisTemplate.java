@@ -361,7 +361,7 @@ public class RedisTemplate implements ICache {
             return true;
         }
         try (Jedis jedis = getJedis()) {
-            Object result = jedis.evalsha(updateLua, 1, argv);
+            Object result = jedis.eval(updateLua, 1, argv);
             return result != null;
         }
     }

@@ -99,7 +99,6 @@ public class Statement<T> extends SqlBuilder<T> {
     }
 
 
-
     public <E> List<E> selectByPagination(Pagination pagination, String... fields) {
         String sql = findList(getModelMeta().getTableName(), fields);
         return (List<E>) getSession().findListByNativeSql(this.modelClass, sql, parameterBindings, pagination);
@@ -180,8 +179,21 @@ public class Statement<T> extends SqlBuilder<T> {
      * @param more columnName,value,columnName,value的形式
      * @return 更新的行数
      */
-    public int set(String column,Object value,Object... more) {
-        Object[] columnNameAndValues = new Object[]{column,value,more};
+    public int set(String column, Object value, Object... more) {
+        Object[] columnNameAndValues ;
+
+        if (more != null && more.length != 0 && more.length % 2 == 0) {
+            columnNameAndValues = new Object[more.length+2];
+            columnNameAndValues[0] = column;
+            columnNameAndValues[1] = value;
+            int index = 2;
+            for (Object o : more) {
+                columnNameAndValues[index++]=o;
+            }
+        }else {
+            columnNameAndValues = new Object[]{column,value};
+        }
+
 
         ParameterBindings pb = new ParameterBindings();
         StringBuilder sb = new StringBuilder(" UPDATE ");
@@ -295,11 +307,11 @@ public class Statement<T> extends SqlBuilder<T> {
         String sql = " UPDATE " + getModelMeta().getTableName() + " SET " + setSql + where;
         ParameterBindings all;
         if (setParams == null) {
-            if(setSql.contains("=")){
+            if (setSql.contains("=")) {
                 setParams = new ParameterBindings();
-            }else {
+            } else {
                 Map<String, Object> map = new HashMap<>();
-                map.put(setSql,null);
+                map.put(setSql, null);
                 return set(map);
             }
         }
@@ -480,8 +492,8 @@ public class Statement<T> extends SqlBuilder<T> {
         if (fields == null || fields.length == 0) {
             if (targetClass != modelClass) {
                 List<String> res = new ArrayList<>();
-                for(ModelMeta.ModelColumnMeta columnMeta: ModelMeta.getModelMeta(targetClass).getColumnMetaSet()){
-                    if(getModelMeta().existColumn(columnMeta.columnName)){
+                for (ModelMeta.ModelColumnMeta columnMeta : ModelMeta.getModelMeta(targetClass).getColumnMetaSet()) {
+                    if (getModelMeta().existColumn(columnMeta.columnName)) {
                         res.add(columnMeta.columnName);
                     }
                 }
