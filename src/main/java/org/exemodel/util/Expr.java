@@ -61,6 +61,7 @@ public class Expr {
         return new Expr(inSqlGenerator(" NOT IN ",left,values.toArray(),parameterBindings),parameterBindings);
     }
 
+
     public static String inSqlGenerator(String op,String column,Object[] values, ParameterBindings parameterBindings){
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(" ");

@@ -1,12 +1,8 @@
 package org.exemodel.orm;
 
-import org.exemodel.orm.ExecutableModel;
-import org.exemodel.orm.ModelMeta;
-import org.exemodel.orm.Statement;
 import org.exemodel.session.AbstractSession;
 import org.exemodel.session.Session;
 import org.exemodel.util.StringUtil;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -102,6 +98,7 @@ public abstract class BaseDao<T extends ExecutableModel> {
 
 
 
+
     public boolean update(Object id, Object form) {
         return statement().id(id).setByObject(form) > 0;
     }
@@ -116,17 +113,17 @@ public abstract class BaseDao<T extends ExecutableModel> {
     }
 
 
-    protected DStatement statement() {
-        return new DStatement(clazz);
+    protected StatementImpl statement() {
+        return new StatementImpl(clazz);
     }
 
-    protected class DStatement extends Statement<DStatement> {
+    protected class StatementImpl extends Statement<StatementImpl> {
 
-        public DStatement(Class<?> clazz) {
+        public StatementImpl(Class<?> clazz) {
             super(clazz);
         }
 
-        public DStatement partitionId(Object value) {
+        public StatementImpl partitionId(Object value) {
             return eq(getModelMeta().getPartitionColumn().columnName, value);
         }
     }

@@ -2,6 +2,7 @@ package org.exemodel.builder;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.pool2.ObjectPool;
 import org.exemodel.session.impl.JdbcSession;
 import org.exemodel.util.Expr;
 import org.exemodel.util.ParameterBindings;
@@ -35,6 +36,14 @@ public abstract class SqlBuilder<T> {
         }
         return and(column, operation, value);
     }
+
+    public T andThen(boolean predict,String column, String operation,Object value) {
+        if (!predict) {
+            return (T) this;
+        }
+        return and(column, operation, value);
+    }
+
 
 
     /**
@@ -167,6 +176,8 @@ public abstract class SqlBuilder<T> {
 
         return inSqlGenerate(StringUtil.underscoreName(column), values, " IN ");
     }
+
+
 
     public T notIn(String column, Object[] values) {
         if (values == null || values.length == 0) {

@@ -270,7 +270,7 @@ public class StatementTest {
     }
 
     @Test
-    public void testMutilResultSetOfProcedure() throws SQLException {
+    public void testMutilResultSetOfProcedure()  {
         TestVO testVO = AbstractSession.currentSession()
                 .callProcedure(TestVO.class," call test_mutil_result_set(?)",new ParameterBindings("zp"));
     }

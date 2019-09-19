@@ -8,10 +8,7 @@ import org.exemodel.session.Session;
 import org.exemodel.builder.SqlBuilder;
 import org.exemodel.util.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author zp [15951818230@163.com]
@@ -102,6 +99,7 @@ public class Statement<T> extends SqlBuilder<T> {
     }
 
 
+
     public <E> List<E> selectByPagination(Pagination pagination, String... fields) {
         String sql = findList(getModelMeta().getTableName(), fields);
         return (List<E>) getSession().findListByNativeSql(this.modelClass, sql, parameterBindings, pagination);
@@ -179,19 +177,18 @@ public class Statement<T> extends SqlBuilder<T> {
     /**
      * 以下几种set方法用于更新时
      *
-     * @param keyValues columnName,value,columnName,value的形式
+     * @param more columnName,value,columnName,value的形式
      * @return 更新的行数
      */
-    public int set(Object... keyValues) {
-        if (keyValues == null || keyValues.length == 0 || keyValues.length % 2 != 0) {
-            throw new JdbcRuntimeException("Error update set");
-        }
+    public int set(String column,Object value,Object... more) {
+        Object[] columnNameAndValues = new Object[]{column,value,more};
+
         ParameterBindings pb = new ParameterBindings();
         StringBuilder sb = new StringBuilder(" UPDATE ");
         sb.append(getModelMeta().getTableName());
         sb.append(" SET ");
         int i = 0;
-        for (Object o : keyValues) {
+        for (Object o : columnNameAndValues) {
             if (i % 2 == 0) {
                 if (i != 0) {
                     sb.append(",");
@@ -207,7 +204,7 @@ public class Statement<T> extends SqlBuilder<T> {
         ParameterBindings all = pb.addAll(parameterBindings);
         int res = getSession().executeUpdate(sb.toString(), all);
         if (isCacheable() && res > 0) {
-            updateCache(keyValues);
+            updateCache(columnNameAndValues);
         }
         return res;
     }
@@ -298,7 +295,13 @@ public class Statement<T> extends SqlBuilder<T> {
         String sql = " UPDATE " + getModelMeta().getTableName() + " SET " + setSql + where;
         ParameterBindings all;
         if (setParams == null) {
-            setParams = new ParameterBindings();
+            if(setSql.contains("=")){
+                setParams = new ParameterBindings();
+            }else {
+                Map<String, Object> map = new HashMap<>();
+                map.put(setSql,null);
+                return set(map);
+            }
         }
         all = setParams.addAll(parameterBindings);
         return getSession().executeUpdate(sql, all);
@@ -450,8 +453,8 @@ public class Statement<T> extends SqlBuilder<T> {
         }
     }
 
-    private String findOne(String table, String[] fields) {
-        return " SELECT " + StringUtil.joinParams(",", fields) + " FROM " + table + where + " limit 1";
+    protected String findOne(String table, String[] fields) {
+        return " SELECT " + StringUtil.joinParams(",", fields) + " FROM " + table + where;
     }
 
     private String findList(String table, String[] fields) {

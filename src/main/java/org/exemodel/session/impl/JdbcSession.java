@@ -51,7 +51,6 @@ public class JdbcSession extends AbstractSession {
         } catch (Exception e) {
             throw new JdbcRuntimeException(e);
         }
-
         return jdbcConnection;
     }
 
