@@ -419,7 +419,7 @@ public class Statement<T> extends SqlBuilder<T> {
             parameterBindings.addIndexBinding(partitionId);
         }
         sb.append(idColumn.columnName);
-        sb.append(" = ? limit 1");
+        sb.append(" = ? ");
         parameterBindings.addIndexBinding(id);
         return sb.toString();
     }
